@@ -116,7 +116,7 @@ function showGame(){
 }
 async function api(action,data={}){
  const token=isHost?game.host_token:game.player_token;
- const {data:result,error}=await db.functions.invoke("cat-chaos",{
+ const {data:result,error}=await db.functions.invoke("rapid-responder",{
   body:{action,...data,host_token:isHost?token:undefined,player_token:isHost?undefined:token,room_code:game?.room_code}
  });
  if(error) throw new Error(error.message||"Connection error");
