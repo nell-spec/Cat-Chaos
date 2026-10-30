@@ -1,0 +1,276 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cat Chaos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#171525;color:#fff;font-family:system-ui,Arial,sans-serif;padding:18px}
+main{max-width:650px;margin:auto}
+h1{text-align:center;font-size:2.5rem;margin:8px 0;color:#ffd66b}
+.sub{text-align:center;color:#c9c3df;margin-bottom:24px}
+.card{background:#29263d;border:1px solid #48415f;border-radius:16px;padding:18px;margin:14px 0}
+h2{margin:0 0 14px;color:#ffd66b}
+input,select,button{width:100%;padding:14px;border-radius:10px;border:0;font-size:16px;margin:6px 0}
+input,select{background:#fff;color:#222}
+button{background:#ffd66b;color:#241d32;font-weight:800;cursor:pointer}
+button.secondary{background:#665d85;color:white}
+button.danger{background:#a83d56;color:white}
+button:disabled{opacity:.4}
+.hidden{display:none!important}
+.small{font-size:13px;color:#c9c3df}
+.status{padding:10px;background:#201d30;border-radius:10px;margin:10px 0}
+.option{background:#39334f;border:2px solid #615777;border-radius:12px;padding:13px;margin:9px 0}
+.option button{margin-top:8px}
+.players{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.player{background:#39334f;padding:10px;border-radius:10px}
+.scoreline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #514966}
+.scoreline button{width:auto;min-width:65px;margin:0}
+#message{position:sticky;top:5px;background:#ffd66b;color:#241d32;padding:10px;border-radius:10px;font-weight:bold;display:none;z-index:5}
+#party{position:fixed;inset:0;background:#171525ee;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:10;font-size:70px;text-align:center}
+#party strong{font-size:26px;color:#ffd66b}
+</style>
+</head>
+<body>
+<main>
+<h1>🐈 CAT CHAOS 🐾</h1>
+<div class="sub">Secret clues. Suspicious cats. Maximum chaos.</div>
+<div id="message"></div>
+
+<section id="home">
+ <div class="card">
+  <h2>Start a new game</h2>
+  <input id="hostName" value="Danielle" placeholder="Your name">
+  <button onclick="createGame()">CREATE GAME</button>
+ </div>
+ <div class="card">
+  <h2>Join a game</h2>
+  <input id="roomInput" placeholder="Room code" autocapitalize="characters">
+  <input id="joinName" placeholder="Your player name">
+  <button onclick="joinGame()">JOIN GAME</button>
+ </div>
+</section>
+
+<section id="game" class="hidden">
+ <div class="card">
+  <h2>Room <span id="roomCode">----</span></h2>
+  <div id="myName" class="small"></div>
+  <div id="phase" class="status">Connecting…</div>
+  <div id="playerList" class="players"></div>
+ </div>
+
+ <div id="hostPanel" class="card hidden">
+  <h2>Master Scoring Device</h2>
+  <div id="hostActions"></div>
+ </div>
+
+ <div id="playerPanel" class="card hidden">
+  <h2>Your private screen</h2>
+  <div id="privateContent"></div>
+ </div>
+
+ <div class="card">
+  <h2>Scores</h2>
+  <div id="scores"></div>
+ </div>
+ <button class="secondary" onclick="refreshState()">REFRESH GAME</button>
+ <button class="danger" onclick="leaveGame()">LEAVE THIS DEVICE</button>
+</section>
+</main>
+
+<div id="party" onclick="this.style.display='none'">
+ <div>🐈 🎉 🐾 😻 🎊</div>
+ <strong>YOU SCORED! CAT CHAOS!</strong>
+ <div style="font-size:18px">Tap to continue</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://aasdlnlrgxnihhlkahii.supabase.co";
+const SUPABASE_KEY = "sb_publishable_nFF3m929Ddr4SUZHgoGcfQ_wtI_xgXM";
+const FUNCTION_URL = SUPABASE_URL + "/functions/v1/cat-chaos";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let game = null;
+let isHost = false;
+let lastMyScore = null;
+let poller = null;
+
+function msg(t){
+ const el=document.getElementById("message");
+ el.textContent=t;el.style.display="block";
+ setTimeout(()=>el.style.display="none",5000);
+}
+function esc(s){
+ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function showGame(){
+ document.getElementById("home").classList.add("hidden");
+ document.getElementById("game").classList.remove("hidden");
+ document.getElementById("hostPanel").classList.toggle("hidden",!isHost);
+ document.getElementById("playerPanel").classList.toggle("hidden",isHost);
+ document.getElementById("roomCode").textContent=game.room_code||"----";
+ document.getElementById("myName").textContent=isHost?"You are the host":("Playing as "+game.player_name);
+}
+async function api(action,data={}){
+ const token=isHost?game.host_token:game.player_token;
+ const {data:result,error}=await db.functions.invoke("cat-chaos",{
+  body:{action,...data,host_token:isHost?token:undefined,player_token:isHost?undefined:token,room_code:game?.room_code}
+ });
+ if(error) throw new Error(error.message||"Connection error");
+ if(result?.error) throw new Error(result.error);
+ if(result?.ok===false) throw new Error(result.message||"Request failed");
+ return result;
+}
+async function createGame(){
+ try{
+  const name=document.getElementById("hostName").value.trim()||"Host";
+  const r=await api("create_game",{display_name:name});
+  game={room_code:r.room_code||r.game?.room_code,host_token:r.host_token||r.token};
+  if(!game.room_code||!game.host_token)throw new Error("The server response is missing the room code or host token.");
+  isHost=true;showGame();await refreshState();startPolling();msg("Room created! Share the room code.");
+ }catch(e){msg("Could not create game: "+e.message)}
+}
+async function joinGame(){
+ try{
+  const room=document.getElementById("roomInput").value.trim().toUpperCase();
+  const name=document.getElementById("joinName").value.trim();
+  if(!room||!name)throw new Error("Enter the room code and your name.");
+  game={room_code:room};
+  const r=await api("join_game",{room_code:room,display_name:name});
+  game.player_token=r.player_token||r.token;
+  game.player_name=name;
+  if(!game.player_token)throw new Error("The server did not return a player token.");
+  isHost=false;showGame();await refreshState();startPolling();
+ }catch(e){game=null;msg("Could not join: "+e.message)}
+}
+async function refreshState(){
+ try{
+  const r=await api(isHost?"host_state":"player_state");
+  const s=r.state||r;
+  render(s);
+ }catch(e){msg("Update: "+e.message)}
+}
+function startPolling(){
+ if(poller)clearInterval(poller);
+ poller=setInterval(refreshState,2500);
+}
+function render(s){
+ const players=s.players||[];
+ const round=s.round||s.current_round||{};
+ const status=round.status||s.status||"lobby";
+ document.getElementById("phase").textContent="Game stage: "+status.replaceAll("_"," ").toUpperCase()+
+  (round.round_number?" · Round "+round.round_number:"");
+ document.getElementById("playerList").innerHTML=players.map(p=>
+  `<div class="player">${esc(p.display_name||p.name||"Player")}</div>`).join("");
+ const scores=players.slice().sort((a,b)=>(b.total_score||0)-(a.total_score||0));
+ document.getElementById("scores").innerHTML=scores.map(p=>
+  `<div class="scoreline"><span>${esc(p.display_name||p.name)}</span><b>${p.total_score||0} pts</b></div>`).join("")||"Scores will appear here.";
+
+ if(isHost)renderHost(s,round,players);
+ else renderPlayer(s,round);
+
+ const me=players.find(p=>p.id===s.player_id);
+ if(!isHost&&me){
+  const n=me.total_score||0;
+  if(lastMyScore!==null&&n>lastMyScore)document.getElementById("party").style.display="flex";
+  lastMyScore=n;
+ }
+}
+function renderHost(s,r,players){
+ const box=document.getElementById("hostActions");
+ let html="";
+ if((r.status||s.status)==="lobby"){
+  html+=`<p>Waiting for all six players to join.</p><button onclick="act('start_voting')">START CATEGORY VOTE</button>`;
+ }
+ if(r.status==="category_vote"){
+  const opts=r.category_options||[];
+  html+=`<p>Players are choosing a category.</p><button onclick="act('reshuffle_categories')">RESHUFFLE OPTIONS</button>`;
+  html+=`<button onclick="act('make_assignments')">LOCK VOTE & ASSIGN CLUES</button>`;
+  html+=opts.map(o=>`<div class="option">${esc(o.title||o.name||o.category||o.text||o)}</div>`).join("");
+ }
+ if(r.status==="assignments"||r.status==="submissions"){
+  html+=`<p>Clue submissions: ${r.submission_count||"check player devices"} / 6</p>`;
+  html+=`<button onclick="act('start_playing')">START PLAYING</button>`;
+ }
+ if(r.status==="playing"){
+  html+=`<p>Give points as players guess. Each score can be awarded once.</p>`;
+  const awarded=r.scores||r.round_scores||[];
+  const used=awarded.map(x=>x.points);
+  players.forEach(p=>{
+   const scored=awarded.find(x=>x.player_id===p.id);
+   if(!scored){
+    html+=`<div class="scoreline"><span>${esc(p.display_name)}</span><select id="pts-${p.id}" style="width:85px;margin:0">${[5,4,3,2,1,0].filter(x=>!used.includes(x)).map(x=>`<option value="${x}">${x} pts</option>`).join("")}</select><button onclick="score('${p.id}')">AWARD</button></div>`;
+   }else html+=`<div class="scoreline">${esc(p.display_name)} — ${scored.points} pts ✓</div>`;
+  });
+  if(awarded.length===6)html+=`<button onclick="act('next_round')">NEXT ROUND</button>`;
+ }
+ html+=`<hr><button class="secondary" onclick="resetScores()">RESET SCORES</button><button class="danger" onclick="endGame()">END & RESET GAME</button>`;
+ box.innerHTML=html;
+}
+function renderPlayer(s,r){
+ const box=document.getElementById("privateContent");
+ let html="";
+ if(r.status==="category_vote"){
+  html+="<p>Vote for the category your group wants to play.</p>";
+  (r.category_options||[]).forEach(o=>{
+   const val=o.title||o.name||o.category||o.text||o;
+   html+=`<div class="option"><b>${esc(val)}</b><button onclick="vote(${JSON.stringify(val)})">VOTE FOR THIS</button></div>`;
+  });
+ }
+ if(r.status==="assignments"){
+  html+=`<p>Your secret assignment:</p><h2>${esc(r.assigned_to_name||r.assignedTo||"Your assigned player")}</h2>`;
+  html+=`<p>Think of a funny, recognizable clue for this person. Keep it secret!</p>`;
+ }
+ if(r.status==="submissions"||r.status==="assignments"){
+  if(r.assigned_to_name||r.assignedTo){
+   html+=`<input id="clueText" placeholder="Enter your secret clue">`;
+   html+=`<button onclick="submitClue()">SUBMIT SECRET CLUE</button>`;
+  }else html+="<p>Waiting for your private assignment…</p>";
+ }
+ if(r.status==="playing"){
+  html+="<p>These are the clues for the other players. Do not show anyone your own secret clue.</p>";
+  (r.clues_for_other_players||r.cluesForOtherPlayers||[]).forEach(c=>{
+   html+=`<div class="option">${esc(c.clue_text||c.clue||c.text)}</div>`;
+  });
+  if(r.my_reveal||r.myReveal){
+   const x=r.my_reveal||r.myReveal;
+   html+=`<div class="option"><h2>😻 Your reveal!</h2>${esc(x.clue_text||x.clue)}<p>Submitted by ${esc(x.creator_name||x.creator||"a player")}</p></div>`;
+  }
+ }
+ if(r.status==="lobby")html+="<p>Waiting for the host to start the game.</p>";
+ box.innerHTML=html||"Waiting for the next step…";
+}
+async function act(action){
+ try{await api(action);await refreshState();msg("Done!")}
+ catch(e){msg(e.message)}
+}
+async function vote(category){try{await api("vote_category",{category});await refreshState();msg("Vote submitted!")}catch(e){msg(e.message)}}
+async function submitClue(){
+ const clue=document.getElementById("clueText")?.value.trim();
+ if(!clue)return msg("Enter your clue first.");
+ try{await api("submit_clue",{clue_text:clue});await refreshState();msg("Secret clue submitted!")}
+ catch(e){msg(e.message)}
+}
+async function score(id){
+ const points=Number(document.getElementById("pts-"+id).value);
+ try{await api("score_player",{player_id:id,points});await refreshState();msg("Points awarded!")}
+ catch(e){msg(e.message)}
+}
+async function resetScores(){
+ if(confirm("Clear all scores but keep the game and players?"))await act("reset_scores");
+}
+async function endGame(){
+ if(confirm("End this game and erase its room, clues, assignments and scores?"))await act("end_game");
+}
+function leaveGame(){
+ if(poller)clearInterval(poller);
+ game=null;isHost=false;lastMyScore=null;
+ document.getElementById("game").classList.add("hidden");
+ document.getElementById("home").classList.remove("hidden");
+}
+</script>
+</body>
+</html>
