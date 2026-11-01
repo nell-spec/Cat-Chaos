@@ -117,7 +117,24 @@ function showGame(){
   : "Playing as "+game.player_name;
 }
 async function api(action,data={}){
- const token=game?(isHost?game.host_token:game.player_token):undefined;
+ const hostActions=[
+  "host_state","start_voting","reshuffle_categories",
+  "make_assignments","start_playing","score_player",
+  "next_round","reset_scores","end_game"
+ ];
+
+ const playerActions=[
+  "player_state","vote_category","submit_clue"
+ ];
+
+ const body={
+  action,
+  ...data,
+  room_code:game?.room_code
+ };
+
+ if(hostActions.includes(action)) body.host_token=game?.host_token;
+ if(playerActions.includes(action)) body.player_token=game?.player_token;
 
  const response=await fetch(FUNCTION_URL,{
   method:"POST",
@@ -126,13 +143,7 @@ async function api(action,data={}){
    "apikey":SUPABASE_KEY,
    "Authorization":"Bearer "+SUPABASE_KEY
   },
-  body:JSON.stringify({
-   action,
-   ...data,
-   host_token:isHost?token:undefined,
-   player_token:isHost?undefined:token,
-   room_code:game?.room_code
-  })
+  body:JSON.stringify(body)
  });
 
  const result=await response.json();
@@ -147,10 +158,26 @@ async function createGame(){
  try{
   const name=document.getElementById("hostName").value.trim()||"Host";
   const r=await api("create_game",{display_name:name});
-  game={room_code:r.room_code||r.game?.room_code,host_token:r.host_token||r.token};
-  if(!game.room_code||!game.host_token)throw new Error("The server response is missing the room code or host token.");
-  isHost=true;showGame();await refreshState();startPolling();msg("Room created! Share the room code.");
- }catch(e){msg("Could not create game: "+e.message)}
+
+  game={
+   room_code:r.room_code,
+   host_token:r.host_token,
+   player_token:r.player_token,
+   player_name:name,
+   player_id:r.player_id
+  };
+
+  if(!game.room_code||!game.host_token||!game.player_token)
+   throw new Error("The server did not return both host and player tokens.");
+
+  isHost=true;
+  showGame();
+  await refreshState();
+  startPolling();
+  msg("Room created! You are Player 1. Share the room code.");
+ }catch(e){
+  msg("Could not create game: "+e.message);
+ }
 }
 async function joinGame(){
  try{
@@ -167,16 +194,23 @@ async function joinGame(){
 }
 async function refreshState(){
  try{
-  const r=await api(isHost?"host_state":"player_state");
-  const s=r.state||r;
-  render(s);
- }catch(e){msg("Update: "+e.message)}
+  if(isHost){
+   const hostResult=await api("host_state");
+   const playerResult=await api("player_state");
+
+   render(hostResult.state||hostResult,playerResult.state||playerResult);
+  }else{
+   const r=await api("player_state");
+   render(r.state||r);
+  }
+ }catch(e){
+  msg("Update: "+e.message);
+ }
 }
 function startPolling(){
  if(poller)clearInterval(poller);
  poller=setInterval(refreshState,2500);
-}
-function render(s){
+}function render(s,playerState=null){
  const players=s.players||[];
  const round=s.round||s.current_round||{};
  const status=round.status||s.status||"lobby";
@@ -188,8 +222,12 @@ function render(s){
  document.getElementById("scores").innerHTML=scores.map(p=>
   `<div class="scoreline"><span>${esc(p.display_name||p.name)}</span><b>${p.total_score||0} pts</b></div>`).join("")||"Scores will appear here.";
 
- if(isHost)renderHost(s,round,players);
- else renderPlayer(s,round);
+ if(isHost){
+  renderHost(s,round,players);
+  if(playerState) renderPlayer(playerState,playerState.round||{});
+ }else{
+  renderPlayer(s,round);
+ }
 
  const me=players.find(p=>p.id===s.player_id);
  if(!isHost&&me){
