@@ -110,9 +110,11 @@ function showGame(){
  document.getElementById("home").classList.add("hidden");
  document.getElementById("game").classList.remove("hidden");
  document.getElementById("hostPanel").classList.toggle("hidden",!isHost);
- document.getElementById("playerPanel").classList.toggle("hidden",isHost);
+ document.getElementById("playerPanel").classList.remove("hidden");
  document.getElementById("roomCode").textContent=game.room_code||"----";
- document.getElementById("myName").textContent=isHost?"You are the host":("Playing as "+game.player_name);
+ document.getElementById("myName").textContent=isHost
+  ? "Host — Player 1: "+game.player_name
+  : "Playing as "+game.player_name;
 }
 async function api(action,data={}){
  const token=game?(isHost?game.host_token:game.player_token):undefined;
