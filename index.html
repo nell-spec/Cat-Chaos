@@ -115,13 +115,30 @@ function showGame(){
  document.getElementById("myName").textContent=isHost?"You are the host":("Playing as "+game.player_name);
 }
 async function api(action,data={}){
-const token=game?(isHost?game.host_token:game.player_token):undefined;
- const {data:result,error}=await db.functions.invoke("cat-chaos",{
-  body:{action,...data,host_token:isHost?token:undefined,player_token:isHost?undefined:token,room_code:game?.room_code}
+ const token=game?(isHost?game.host_token:game.player_token):undefined;
+
+ const response=await fetch(FUNCTION_URL,{
+  method:"POST",
+  headers:{
+   "Content-Type":"application/json",
+   "apikey":SUPABASE_KEY,
+   "Authorization":"Bearer "+SUPABASE_KEY
+  },
+  body:JSON.stringify({
+   action,
+   ...data,
+   host_token:isHost?token:undefined,
+   player_token:isHost?undefined:token,
+   room_code:game?.room_code
+  })
  });
- if(error) throw new Error(error.message||"Connection error");
+
+ const result=await response.json();
+
+ if(!response.ok) throw new Error(result.error||"Server error: "+response.status);
  if(result?.error) throw new Error(result.error);
  if(result?.ok===false) throw new Error(result.message||"Request failed");
+
  return result;
 }
 async function createGame(){
