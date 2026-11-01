@@ -115,7 +115,7 @@ function showGame(){
  document.getElementById("myName").textContent=isHost?"You are the host":("Playing as "+game.player_name);
 }
 async function api(action,data={}){
- const token=isHost?game.host_token:game.player_token;
+const token=game?(isHost?game.host_token:game.player_token):undefined;
  const {data:result,error}=await db.functions.invoke("rapid-responder",{
   body:{action,...data,host_token:isHost?token:undefined,player_token:isHost?undefined:token,room_code:game?.room_code}
  });
