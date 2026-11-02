@@ -279,10 +279,10 @@ if(r.status==="category_vote"){
   players.forEach(p=>{
    const scored=awarded.find(x=>x.player_id===p.id);
    if(!scored){
-    html+=`<div class="scoreline"><span>${esc(p.display_name)}</span><select id="pts-${p.id}" style="width:85px;margin:0">${[5,4,3,2,1,0].filter(x=>!used.includes(x)).map(x=>`<option value="${x}">${x} pts</option>`).join("")}</select><button onclick="score('${p.id}')">AWARD</button></div>`;
+    html+=`<div class="scoreline"><span>${esc(p.display_name)}</span><select id="pts-${p.id}" style="width:85px;margin:0">${Array.from({length:players.length},(_,i)=>players.length-1-i).filter(x=>!used.includes(x)).map(x=>`<option value="${x}">${x} pts</option>`).join("")}</select><button onclick="score('${p.id}')">AWARD</button></div>`;
    }else html+=`<div class="scoreline">${esc(p.display_name)} — ${scored.points} pts ✓</div>`;
   });
-  if(awarded.length===6)html+=`<button onclick="act('next_round')">NEXT ROUND</button>`;
+  if(awarded.length===players.length)html+=`<button onclick="act('next_round')">NEXT ROUND</button>`;
  }
  html+=`<hr><button class="secondary" onclick="resetScores()">RESET SCORES</button><button class="danger" onclick="endGame()">END & RESET GAME</button>`;
  box.innerHTML=html;
@@ -343,12 +343,15 @@ async function act(action){
  try{await api(action);await refreshState();msg("Done!")}
  catch(e){msg(e.message)}
 }
-async function vote(category){try{await api("vote_category",{category});await refreshState();msg("Vote submitted!")}catch(e){msg(e.message)}}
-async function submitClue(){
- const clue=document.getElementById("clueText")?.value.trim();
- if(!clue)return msg("Enter your clue first.");
- try{await api("submit_clue",{clue_text:clue});await refreshState();msg("Secret clue submitted!")}
- catch(e){msg(e.message)}
+async function vote(category){
+ try{
+  msg("Sending vote...");
+  const result=await api("vote_category",{category});
+  msg("SERVER RESPONSE: "+JSON.stringify(result));
+  await refreshState();
+ }catch(e){
+  msg("VOTE ERROR: "+e.message);
+ }
 }
 async function score(id){
  const points=Number(document.getElementById("pts-"+id).value);
