@@ -73,7 +73,7 @@ button:disabled{opacity:.4}
  </div>
 
  <div id="playerPanel" class="card hidden">
-  <h2>Your private screen</h2>
+  <h2>🐈 Your Secret Clues & Assignments</h2>
   <div id="privateContent"></div>
  </div>
 
@@ -245,7 +245,7 @@ function renderHost(s,r,players){
  const box=document.getElementById("hostActions");
  let html="";
  if((r.status||s.status)==="lobby"){
-  html+=`<p>Waiting for all six players to join.</p><button onclick="act('start_voting')">START CATEGORY VOTE</button>`;
+  html+=`<p>${players.length<2?"Waiting for more players…":"Game ready to start!"}</p><button onclick="act('start_voting')" ${players.length<2?"disabled":""}>START CATEGORY VOTE</button>`;
  }
 if(r.status==="category_vote"){
   const opts=r.category_options||[];
@@ -269,7 +269,7 @@ if(r.status==="category_vote"){
   html+=opts.map(o=>`<div class="option">${esc(o.title||o.name||o.category||o.text||o)}</div>`).join("");
 }
  if(r.status==="assignments"||r.status==="submissions"){
-  html+=`<p>Clue submissions: ${r.submission_count||"check player devices"} / 6</p>`;
+  html+=`<p>Clue submissions: ${r.submission_count??0} / ${players.length}</p>`;
   html+=`<button onclick="act('start_playing')">START PLAYING</button>`;
  }
  if(r.status==="playing"){
@@ -348,7 +348,7 @@ async function vote(category){
  try{
   msg("Sending vote...");
   const result=await api("vote_category",{category});
-  msg("SERVER RESPONSE: "+JSON.stringify(result));
+  msg("Vote saved!");
   await refreshState();
  }catch(e){
   msg("VOTE ERROR: "+e.message);
