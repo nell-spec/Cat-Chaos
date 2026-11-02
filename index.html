@@ -302,7 +302,7 @@ if(r.status==="category_vote"){
   }
 
   (r.category_options||[]).forEach(o=>{
-   const val=o.title||o.name||o.category||o.text||o;
+   const val=String(o.title||o.name||o.category||o.text||o);
    const selected=myVote===val;
 
    html+=`
@@ -310,7 +310,8 @@ if(r.status==="category_vote"){
      <b>${esc(val)}</b>
      <button
       ${selected?"disabled":""}
-      onclick='vote(this.dataset.category)' data-category="${String(val).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")}">
+      data-category="${encodeURIComponent(val)}"
+      onclick="vote(decodeURIComponent(this.dataset.category))">
       ${selected?"✓ YOUR VOTE IS IN":"VOTE FOR THIS"}
      </button>
     </div>`;
