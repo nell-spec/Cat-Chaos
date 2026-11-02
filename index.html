@@ -24,7 +24,12 @@ button:disabled{opacity:.4}
 .small{font-size:13px;color:#c9c3df}
 .status{padding:10px;background:#201d30;border-radius:10px;margin:10px 0}
 .option{background:#39334f;border:2px solid #615777;border-radius:12px;padding:13px;margin:9px 0}
-.option button{margin-top:8px}
+ .option.selected{
+ background:#45405f;
+ border:3px solid #ffd66b;
+ box-shadow:0 0 12px #ffd66b55;
+}
+ .option button{margin-top:8px}
 .players{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .player{background:#39334f;padding:10px;border-radius:10px}
 .scoreline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #514966}
@@ -242,12 +247,27 @@ function renderHost(s,r,players){
  if((r.status||s.status)==="lobby"){
   html+=`<p>Waiting for all six players to join.</p><button onclick="act('start_voting')">START CATEGORY VOTE</button>`;
  }
- if(r.status==="category_vote"){
+if(r.status==="category_vote"){
   const opts=r.category_options||[];
-  html+=`<p>Players are choosing a category.</p><button onclick="act('reshuffle_categories')">RESHUFFLE OPTIONS</button>`;
+  const votes=r.votes||{};
+  const voteCount=players.filter(p=>votes[p.id]).length;
+
+  html+=`<p>Players are choosing a category.</p>`;
+  html+=`<h2>${voteCount} of ${players.length} votes received</h2>`;
+
+  html+=`<div class="players">`+
+   players.map(p=>`
+    <div class="player">
+     ${esc(p.display_name)}
+     <b>${votes[p.id]?"✓ VOTED":"… WAITING"}</b>
+    </div>
+   `).join("")+
+  `</div>`;
+
+  html+=`<button onclick="act('reshuffle_categories')">RESHUFFLE OPTIONS</button>`;
   html+=`<button onclick="act('make_assignments')">LOCK VOTE & ASSIGN CLUES</button>`;
   html+=opts.map(o=>`<div class="option">${esc(o.title||o.name||o.category||o.text||o)}</div>`).join("");
- }
+}
  if(r.status==="assignments"||r.status==="submissions"){
   html+=`<p>Clue submissions: ${r.submission_count||"check player devices"} / 6</p>`;
   html+=`<button onclick="act('start_playing')">START PLAYING</button>`;
@@ -270,13 +290,32 @@ function renderHost(s,r,players){
 function renderPlayer(s,r){
  const box=document.getElementById("privateContent");
  let html="";
- if(r.status==="category_vote"){
+if(r.status==="category_vote"){
+  const myVote=r.own_vote||null;
+
   html+="<p>Vote for the category your group wants to play.</p>";
+
+  if(myVote){
+   html+=`<div class="status">✓ Your vote for <b>${esc(myVote)}</b> has been recorded!</div>`;
+  }else{
+   html+=`<div class="status">You haven't voted yet.</div>`;
+  }
+
   (r.category_options||[]).forEach(o=>{
    const val=o.title||o.name||o.category||o.text||o;
-   html+=`<div class="option"><b>${esc(val)}</b><button onclick="vote(${JSON.stringify(val)})">VOTE FOR THIS</button></div>`;
+   const selected=myVote===val;
+
+   html+=`
+    <div class="option ${selected?"selected":""}">
+     <b>${esc(val)}</b>
+     <button
+      ${selected?"disabled":""}
+      onclick="vote(${JSON.stringify(val)})">
+      ${selected?"✓ YOUR VOTE IS IN":"VOTE FOR THIS"}
+     </button>
+    </div>`;
   });
- }
+}
  if(r.status==="assignments"){
   html+=`<p>Your secret assignment:</p><h2>${esc(r.assigned_to_name||r.assignedTo||"Your assigned player")}</h2>`;
   html+=`<p>Think of a funny, recognizable clue for this person. Keep it secret!</p>`;
