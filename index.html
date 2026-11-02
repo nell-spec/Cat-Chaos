@@ -269,12 +269,12 @@ function renderHost(s,r,players){
  if((r.status||s.status)==="lobby"){
   html+=`<p>${players.length<2?"Waiting for more players…":"Game ready to start!"}</p><button onclick="act('start_voting')" ${players.length<2?"disabled":""}>START CATEGORY VOTE</button>`;
  }
-if(r.status==="category_vote"){
+if(["category_vote","category_revote"].includes(r.status)){
   const opts=r.category_options||[];
   const votes=r.votes||{};
   const voteCount=players.filter(p=>votes[p.id]).length;
 
-  html+=`<p>Players are choosing a category.</p>`;
+  html+=`<p>${r.status==="category_revote"?"The first vote was tied! Revote among the tied categories.":"Players are choosing a category."}</p>`;
   html+=`<h2>${voteCount} of ${players.length} votes received</h2>`;
 
   html+=`<div class="players">`+
@@ -286,8 +286,10 @@ if(r.status==="category_vote"){
    `).join("")+
   `</div>`;
 
-  html+=`<button onclick="act('reshuffle_categories')">RESHUFFLE OPTIONS</button>`;
-  html+=`<button onclick="act('make_assignments')">LOCK VOTE & ASSIGN CLUES</button>`;
+  html+=`<button onclick="act('make_assignments')">${r.status==="category_revote"?"LOCK REVOTE & ASSIGN CLUES":"LOCK VOTE & ASSIGN CLUES"}</button>`;
+ html+=`<button onclick="act('reshuffle_categories')">RESHUFFLE OPTIONS</button>`;
+}
+  html+=`<button onclick="act('make_assignments')">${r.status==="category_revote"?"LOCK REVOTE & ASSIGN CLUES":"LOCK VOTE & ASSIGN CLUES"}</button>`;
   html+=opts.map(o=>`<div class="option">${esc(o.title||o.name||o.category||o.text||o)}</div>`).join("");
 }
  if(r.status==="assignments"||r.status==="submissions"){
@@ -331,10 +333,12 @@ function renderPlayer(s,r){
   const category=getRoundCategory(s,r);
   if(category) html+=`<div class="status">🐈 CURRENT CATEGORY: <b>${esc(category)}</b></div>`;
  }
-if(r.status==="category_vote"){
+html+=`<button onclick="act('make_assignments')">${r.status==="category_revote"?"LOCK REVOTE & ASSIGN CLUES":"LOCK VOTE & ASSIGN CLUES"}</button>`;
   const myVote=r.own_vote||null;
 
-  html+="<p>Vote for the category your group wants to play.</p>";
+  html+=r.status==="category_revote"
+ ? "<p>The first vote was tied! Vote again among the tied categories.</p>"
+ : "<p>Vote for the category your group wants to play.</p>";
 
   if(myVote){
    html+=`<div class="status">✓ Your vote for <b>${esc(myVote)}</b> has been recorded!</div>`;
