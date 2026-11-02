@@ -203,7 +203,7 @@ async function refreshState(){
    const hostResult=await api("host_state");
    const playerResult=await api("player_state");
 
-   render(hostResult.state||hostResult,playerResult.state||playerResult);
+   console.log("HOST STATE:",hostResult); console.log("PLAYER STATE:",playerResult); render(hostResult.state||hostResult,playerResult.state||playerResult);
   }else{
    const r=await api("player_state");
    render(r.state||r);
