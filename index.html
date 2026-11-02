@@ -102,6 +102,7 @@ let game = null;
 let isHost = false;
 let lastMyScore = null;
 let poller = null;
+let clueDraft = "";
 
 function msg(t){
  const el=document.getElementById("message");
@@ -198,6 +199,10 @@ async function joinGame(){
  }catch(e){game=null;msg("Could not join: "+e.message)}
 }
 async function refreshState(){
+ if(refreshInProgress||!game)return;
+ refreshInProgress=true;
+ const refreshGame=game;
+ 
  try{
   if(isHost){
    const hostResult=await api("host_state");
@@ -208,13 +213,19 @@ async function refreshState(){
    const r=await api("player_state");
    render(r.state||r);
   }
- }catch(e){
-  msg("Update: "+e.message);
+  }catch(e){
+  if(game===refreshGame)msg("Update: "+e.message);
+ }finally{
+  refreshInProgress=false;
  }
 }
 function startPolling(){
  if(poller)clearInterval(poller);
- poller=setInterval(refreshState,2500);
+ poller=setInterval(()=>{
+ const el=document.activeElement;
+ if(el && el.id==="clueText") return;
+ refreshState();
+},2500);
 }function render(s,playerState=null){
  const players=s.players||[];
  const round=s.round||s.current_round||{};
@@ -241,9 +252,20 @@ function startPolling(){
   lastMyScore=n;
  }
 }
+function getRoundCategory(s,r){
+ return r.category||r.selected_category||r.winning_category||
+        r.chosen_category||r.category_name||
+        s.category||s.selected_category||s.winning_category||
+        s.chosen_category||s.category_name||"";
+}
+
 function renderHost(s,r,players){
  const box=document.getElementById("hostActions");
- let html="";
+  let html="";
+ if(["assignments","submissions","playing"].includes(r.status)){
+  const category=getRoundCategory(s,r);
+  if(category) html+=`<div class="status">🐈 CURRENT CATEGORY: <b>${esc(category)}</b></div>`;
+ }
  if((r.status||s.status)==="lobby"){
   html+=`<p>${players.length<2?"Waiting for more players…":"Game ready to start!"}</p><button onclick="act('start_voting')" ${players.length<2?"disabled":""}>START CATEGORY VOTE</button>`;
  }
@@ -269,8 +291,18 @@ if(r.status==="category_vote"){
   html+=opts.map(o=>`<div class="option">${esc(o.title||o.name||o.category||o.text||o)}</div>`).join("");
 }
  if(r.status==="assignments"||r.status==="submissions"){
-  html+=`<p>Clue submissions: ${r.submission_count??0} / ${players.length}</p>`;
-  html+=`<button onclick="act('start_playing')">START PLAYING</button>`;
+  const submitted=Number(r.submission_count||0);
+  const allSubmitted=submitted>=players.length;
+
+  html+=`<p>Clue submissions: ${submitted} / ${players.length}</p>`;
+
+  if(allSubmitted){
+   html+=`<div class="status">✓ Everyone has submitted their clue!</div>`;
+  }else{
+   html+=`<div class="status">WAITING FOR ${players.length-submitted} MORE PLAYER(S)</div>`;
+  }
+
+  html+=`<button onclick="act('start_playing')" ${allSubmitted?"":"disabled"}>START PLAYING</button>`;
  }
  if(r.status==="playing"){
   html+=`<p>Give points as players guess. Each score can be awarded once.</p>`;
@@ -288,8 +320,17 @@ if(r.status==="category_vote"){
  box.innerHTML=html;
 }
 function renderPlayer(s,r){
+ if(document.activeElement?.id==="clueText"){
+  const input=document.getElementById("clueText");
+  if(input) clueDraft=input.value;
+  return;
+ }
  const box=document.getElementById("privateContent");
  let html="";
+ if(["assignments","submissions","playing"].includes(r.status)){
+  const category=getRoundCategory(s,r);
+  if(category) html+=`<div class="status">🐈 CURRENT CATEGORY: <b>${esc(category)}</b></div>`;
+ }
 if(r.status==="category_vote"){
   const myVote=r.own_vote||null;
 
@@ -309,7 +350,7 @@ if(r.status==="category_vote"){
     <div class="option ${selected?"selected":""}">
      <b>${esc(val)}</b>
      <button
-      ${selected?"disabled":""}
+      ${(selected||voteInProgress)?"disabled":""}
       data-category="${encodeURIComponent(val)}"
       onclick="vote(decodeURIComponent(this.dataset.category))">
       ${selected?"✓ YOUR VOTE IS IN":"VOTE FOR THIS"}
@@ -323,7 +364,7 @@ if(r.status==="category_vote"){
  }
  if(r.status==="submissions"||r.status==="assignments"){
   if(r.assigned_to_name||r.assignedTo){
-   html+=`<input id="clueText" placeholder="Enter your secret clue">`;
+   html+=`<input id="clueText" placeholder="Enter your secret clue" value="${esc(clueDraft)}" oninput="clueDraft=this.value">`;
    html+=`<button onclick="submitClue()">SUBMIT SECRET CLUE</button>`;
   }else html+="<p>Waiting for your private assignment…</p>";
  }
@@ -340,32 +381,102 @@ if(r.status==="category_vote"){
  if(r.status==="lobby")html+="<p>Waiting for the host to start the game.</p>";
  box.innerHTML=html||"Waiting for the next step…";
 }
+let actionInProgress=false;
+let clueSubmissionInProgress=false;
+let voteInProgress=false;
+let refreshInProgress=false;
 async function act(action){
- try{await api(action);await refreshState();msg("Done!")}
- catch(e){msg(e.message)}
+ if(actionInProgress)return;
+ actionInProgress=true;
+ try{
+  await api(action);
+  await refreshState();
+  msg("Done!");
+ }catch(e){
+  msg(e.message);
+ }finally{
+  actionInProgress=false;
+ }
 }
+async function submitClue(){
+ if(clueSubmissionInProgress)return;
+
+ const input=document.getElementById("clueText");
+ const button=input?.nextElementSibling;
+ const clue=(input?.value||clueDraft).trim();
+
+ if(!clue){
+  msg("Enter a clue first.");
+  return;
+ }
+
+ clueSubmissionInProgress=true;
+ if(button)button.disabled=true;
+
+ try{
+  await api("submit_clue",{clue_text:clue});
+  clueDraft="";
+  msg("Your clue was submitted!");
+  const box=document.getElementById("privateContent");
+  if(box){
+   box.innerHTML='<div class="status">✓ Your clue has been submitted! Waiting for the other players…</div>';
+  }
+  await refreshState();
+ }catch(e){
+  msg("Could not submit clue: "+e.message);
+ }finally{
+  clueSubmissionInProgress=false;
+  if(button&&button.isConnected)button.disabled=false;
+ }
+}
+
 async function vote(category){
+ if(voteInProgress)return;
+ voteInProgress=true;
+
  try{
   await api("vote_category",{category});
   await refreshState();
  }catch(e){
   msg("VOTE ERROR: "+e.message);
+ }finally{
+  voteInProgress=false;
  }
 }
 async function score(id){
+ if(actionInProgress)return;
+ actionInProgress=true;
+
  const points=Number(document.getElementById("pts-"+id).value);
- try{await api("score_player",{player_id:id,points});await refreshState();msg("Points awarded!")}
- catch(e){msg(e.message)}
+
+ try{
+  await api("score_player",{player_id:id,points});
+  await refreshState();
+  msg("Points awarded!");
+ }catch(e){
+  msg(e.message);
+ }finally{
+  actionInProgress=false;
+ }
 }
 async function resetScores(){
  if(confirm("Clear all scores but keep the game and players?"))await act("reset_scores");
 }
 async function endGame(){
- if(confirm("End this game and erase its room, clues, assignments and scores?"))await act("end_game");
+ if(confirm("WARNING: This permanently ends the game and erases its room, clues, assignments and scores. This cannot be undone. Are you absolutely sure?"))await act("end_game");
 }
 function leaveGame(){
  if(poller)clearInterval(poller);
- game=null;isHost=false;lastMyScore=null;
+ poller=null;
+ game=null;
+ isHost=false;
+ lastMyScore=null;
+ clueDraft="";
+ actionInProgress=false;
+ clueSubmissionInProgress=false;
+ voteInProgress=false;
+ refreshInProgress=false;
+ document.getElementById("party").style.display="none";
  document.getElementById("game").classList.add("hidden");
  document.getElementById("home").classList.remove("hidden");
 }
