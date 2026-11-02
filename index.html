@@ -377,10 +377,6 @@ if(r.status==="category_vote"){
   (r.clues_for_other_players||r.cluesForOtherPlayers||[]).forEach(c=>{
    html+=`<div class="option">${esc(c.clue_text||c.clue||c.text)}</div>`;
   });
-  if(r.my_reveal||r.myReveal){
-   const x=r.my_reveal||r.myReveal;
-   html+=`<div class="option"><h2>😻 Your reveal!</h2>${esc(x.clue_text||x.clue)}<p>Submitted by ${esc(x.creator_name||x.creator||"a player")}</p></div>`;
-  }
  }
  if(r.status==="lobby")html+="<p>Waiting for the host to start the game.</p>";
  box.innerHTML=html||"Waiting for the next step…";
