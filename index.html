@@ -375,7 +375,10 @@ if(r.status==="category_vote"){
  if(r.status==="playing"){
   html+="<p>These are the clues for the other players. Do not show anyone your own secret clue.</p>";
   (r.clues_for_other_players||r.cluesForOtherPlayers||[]).forEach(c=>{
-   html+=`<div class="option">${esc(c.clue_text||c.clue||c.text)}</div>`;
+   html+=`<div class="option">
+    <b>${esc(c.creator_name||"A player")}</b>
+    <div>${esc(c.clue_text||c.clue||c.text)}</div>
+   </div>`;
   });
  }
  if(r.status==="lobby")html+="<p>Waiting for the host to start the game.</p>";
