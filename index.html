@@ -352,7 +352,7 @@ if(r.status==="category_vote"){
      <button
       ${(selected||voteInProgress)?"disabled":""}
       data-category="${encodeURIComponent(val)}"
-      onclick="vote(decodeURIComponent(this.dataset.category))">
+      onclick="vote(decodeURIComponent(this.dataset.category),this)">
       ${selected?"✓ YOUR VOTE IS IN":"VOTE FOR THIS"}
      </button>
     </div>`;
@@ -363,10 +363,14 @@ if(r.status==="category_vote"){
   html+=`<p>Think of a funny, recognizable clue for this person. Keep it secret!</p>`;
  }
  if(r.status==="submissions"||r.status==="assignments"){
-  if(r.assigned_to_name||r.assignedTo){
+  if(r.has_submitted_clue){
+   html+=`<div class="status">✓ Your clue has been submitted! Waiting for the other players…</div>`;
+  }else if(r.assigned_to_name||r.assignedTo){
    html+=`<input id="clueText" placeholder="Enter your secret clue" value="${esc(clueDraft)}" oninput="clueDraft=this.value">`;
    html+=`<button onclick="submitClue()">SUBMIT SECRET CLUE</button>`;
-  }else html+="<p>Waiting for your private assignment…</p>";
+  }else{
+   html+="<p>Waiting for your private assignment…</p>";
+  }
  }
  if(r.status==="playing"){
   html+="<p>These are the clues for the other players. Do not show anyone your own secret clue.</p>";
@@ -430,17 +434,19 @@ async function submitClue(){
  }
 }
 
-async function vote(category){
+async function vote(category,button){
  if(voteInProgress)return;
  voteInProgress=true;
+ if(button)button.disabled=true;
 
  try{
   await api("vote_category",{category});
+  voteInProgress=false;
   await refreshState();
  }catch(e){
-  msg("VOTE ERROR: "+e.message);
- }finally{
   voteInProgress=false;
+  if(button&&button.isConnected)button.disabled=false;
+  msg("VOTE ERROR: "+e.message);
  }
 }
 async function score(id){
