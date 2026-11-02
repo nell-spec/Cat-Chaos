@@ -310,7 +310,7 @@ if(r.status==="category_vote"){
      <b>${esc(val)}</b>
      <button
       ${selected?"disabled":""}
-      onclick="vote(${JSON.stringify(val)})">
+      onclick='vote(this.dataset.category)' data-category="${String(val).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")}">
       ${selected?"✓ YOUR VOTE IS IN":"VOTE FOR THIS"}
      </button>
     </div>`;
