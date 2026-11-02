@@ -261,15 +261,18 @@ function getRoundCategory(s,r){
 
 function renderHost(s,r,players){
  const box=document.getElementById("hostActions");
-  let html="";
+ let html="";
+
  if(["assignments","submissions","playing"].includes(r.status)){
   const category=getRoundCategory(s,r);
   if(category) html+=`<div class="status">🐈 CURRENT CATEGORY: <b>${esc(category)}</b></div>`;
  }
+
  if((r.status||s.status)==="lobby"){
   html+=`<p>${players.length<2?"Waiting for more players…":"Game ready to start!"}</p><button onclick="act('start_voting')" ${players.length<2?"disabled":""}>START CATEGORY VOTE</button>`;
  }
-if(["category_vote","category_revote"].includes(r.status)){
+
+ if(["category_vote","category_revote"].includes(r.status)){
   const opts=r.category_options||[];
   const votes=r.votes||{};
   const voteCount=players.filter(p=>votes[p.id]).length;
@@ -286,12 +289,14 @@ if(["category_vote","category_revote"].includes(r.status)){
    `).join("")+
   `</div>`;
 
-  html+=`<button onclick="act('make_assignments')">${r.status==="category_revote"?"LOCK REVOTE & ASSIGN CLUES":"LOCK VOTE & ASSIGN CLUES"}</button>`;
- html+=`<button onclick="act('reshuffle_categories')">RESHUFFLE OPTIONS</button>`;
-}
+  if(r.status==="category_vote"){
+   html+=`<button onclick="act('reshuffle_categories')">RESHUFFLE OPTIONS</button>`;
+  }
+
   html+=`<button onclick="act('make_assignments')">${r.status==="category_revote"?"LOCK REVOTE & ASSIGN CLUES":"LOCK VOTE & ASSIGN CLUES"}</button>`;
   html+=opts.map(o=>`<div class="option">${esc(o.title||o.name||o.category||o.text||o)}</div>`).join("");
-}
+ }
+
  if(r.status==="assignments"||r.status==="submissions"){
   const submitted=Number(r.submission_count||0);
   const allSubmitted=submitted>=players.length;
@@ -306,18 +311,24 @@ if(["category_vote","category_revote"].includes(r.status)){
 
   html+=`<button onclick="act('start_playing')" ${allSubmitted?"":"disabled"}>START PLAYING</button>`;
  }
+
  if(r.status==="playing"){
   html+=`<p>Give points as players guess. Each score can be awarded once.</p>`;
   const awarded=r.scores||r.round_scores||[];
   const used=awarded.map(x=>x.points);
+
   players.forEach(p=>{
    const scored=awarded.find(x=>x.player_id===p.id);
    if(!scored){
     html+=`<div class="scoreline"><span>${esc(p.display_name)}</span><select id="pts-${p.id}" style="width:85px;margin:0">${Array.from({length:players.length},(_,i)=>players.length-1-i).filter(x=>!used.includes(x)).map(x=>`<option value="${x}">${x} pts</option>`).join("")}</select><button onclick="score('${p.id}')">AWARD</button></div>`;
-   }else html+=`<div class="scoreline">${esc(p.display_name)} — ${scored.points} pts ✓</div>`;
+   }else{
+    html+=`<div class="scoreline">${esc(p.display_name)} — ${scored.points} pts ✓</div>`;
+   }
   });
+
   if(awarded.length===players.length)html+=`<button onclick="act('next_round')">NEXT ROUND</button>`;
  }
+
  html+=`<hr><button class="secondary" onclick="resetScores()">RESET SCORES</button><button class="danger" onclick="endGame()">END & RESET GAME</button>`;
  box.innerHTML=html;
 }
@@ -327,18 +338,21 @@ function renderPlayer(s,r){
   if(input) clueDraft=input.value;
   return;
  }
+
  const box=document.getElementById("privateContent");
  let html="";
+
  if(["assignments","submissions","playing"].includes(r.status)){
   const category=getRoundCategory(s,r);
   if(category) html+=`<div class="status">🐈 CURRENT CATEGORY: <b>${esc(category)}</b></div>`;
  }
-html+=`<button onclick="act('make_assignments')">${r.status==="category_revote"?"LOCK REVOTE & ASSIGN CLUES":"LOCK VOTE & ASSIGN CLUES"}</button>`;
+
+ if(["category_vote","category_revote"].includes(r.status)){
   const myVote=r.own_vote||null;
 
   html+=r.status==="category_revote"
- ? "<p>The first vote was tied! Vote again among the tied categories.</p>"
- : "<p>Vote for the category your group wants to play.</p>";
+   ? "<p>The first vote was tied! Vote again among the tied categories.</p>"
+   : "<p>Vote for the category your group wants to play.</p>";
 
   if(myVote){
    html+=`<div class="status">✓ Your vote for <b>${esc(myVote)}</b> has been recorded!</div>`;
@@ -361,11 +375,13 @@ html+=`<button onclick="act('make_assignments')">${r.status==="category_revote"?
      </button>
     </div>`;
   });
-}
+ }
+
  if(r.status==="assignments"){
   html+=`<p>Your secret assignment:</p><h2>${esc(r.assigned_to_name||r.assignedTo||"Your assigned player")}</h2>`;
   html+=`<p>Think of a funny, recognizable clue for this person. Keep it secret!</p>`;
  }
+
  if(r.status==="submissions"||r.status==="assignments"){
   if(r.has_submitted_clue){
    html+=`<div class="status">✓ Your clue has been submitted! Waiting for the other players…</div>`;
@@ -376,6 +392,7 @@ html+=`<button onclick="act('make_assignments')">${r.status==="category_revote"?
    html+="<p>Waiting for your private assignment…</p>";
   }
  }
+
  if(r.status==="playing"){
   html+="<p>These are the clues for the other players. Do not show anyone your own secret clue.</p>";
   (r.clues_for_other_players||r.cluesForOtherPlayers||[]).forEach(c=>{
@@ -385,7 +402,9 @@ html+=`<button onclick="act('make_assignments')">${r.status==="category_revote"?
    </div>`;
   });
  }
+
  if(r.status==="lobby")html+="<p>Waiting for the host to start the game.</p>";
+
  box.innerHTML=html||"Waiting for the next step…";
 }
 let actionInProgress=false;
