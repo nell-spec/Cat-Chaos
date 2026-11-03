@@ -395,6 +395,11 @@ async function createGame(){
  try{
   const name=document.getElementById("hostName").value.trim()||"Host";
 
+  const r=await api("create_game",{
+   display_name:name,
+   profile_token:profileToken
+  });
+  storeProfile(r);
 
   game={
    room_code:r.room_code,
