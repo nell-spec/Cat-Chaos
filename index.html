@@ -12,7 +12,45 @@ body{margin:0;background:#171525;color:#fff;font-family:system-ui,Arial,sans-ser
 main{max-width:650px;margin:auto}
 h1{text-align:center;font-size:2.5rem;margin:8px 0;color:#ffd66b}
 .sub{text-align:center;color:#c9c3df;margin-bottom:24px}
-.card{background:#29263d;border:1px solid #48415f;border-radius:16px;padding:18px;margin:14px 0}
+ .cat-quote{
+ background:#201d30;
+ border:1px solid #665d85;
+ border-radius:12px;
+ padding:12px;
+ text-align:center;
+ margin:12px 0;
+ color:#ffd66b;
+}
+.cat-quote button{
+ margin-top:8px;
+ padding:9px;
+}
+.cat-mascot{
+ text-align:center;
+ margin:10px auto 20px;
+ padding:12px;
+}
+.cat-mascot svg{
+ width:125px;
+ height:110px;
+ filter:drop-shadow(0 5px 8px #0005);
+}
+.cat-mascot p{
+ color:#ffd66b;
+ font-weight:800;
+ margin:4px 0;
+}
+.cat-mascot span{
+ color:#c9c3df;
+ font-size:13px;
+}
+.cat-face{
+ fill:#f0a65a;
+ stroke:#392b36;
+ stroke-width:4;
+ stroke-linejoin:round;
+}
+ .card{background:#29263d;border:1px solid #48415f;border-radius:16px;padding:18px;margin:14px 0}
 h2{margin:0 0 14px;color:#ffd66b}
 input,select,button{width:100%;padding:14px;border-radius:10px;border:0;font-size:16px;margin:6px 0}
 input,select{background:#fff;color:#222}
@@ -67,12 +105,30 @@ button:disabled{opacity:.4}
 <main>
 <h1>🐈 CAT CHAOS 🐾</h1>
 <div class="sub">🐾 A secret-assignment clue & guessing party game 🐾</div>
-<div id="message"></div>
+<div class="cat-mascot">
+ <svg viewBox="0 0 160 130" role="img" aria-label="Cartoon orange cat">
+  <path class="cat-face" d="M35 48 L25 8 L59 29 Q80 18 101 29 L135 8 L125 49 Q143 92 112 111 Q80 132 48 111 Q17 92 35 48Z"/>
+  <path d="M48 62 Q62 52 72 64" fill="none" stroke="#392b36" stroke-width="4" stroke-linecap="round"/>
+  <path d="M88 64 Q99 52 112 62" fill="none" stroke="#392b36" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="62" cy="72" rx="5" ry="8" fill="#392b36"/>
+  <ellipse cx="99" cy="72" rx="5" ry="8" fill="#392b36"/>
+  <path d="M76 84 Q80 79 84 84 L80 89Z" fill="#a83d56"/>
+  <path d="M80 89 Q72 99 65 92 M80 89 Q88 99 95 92" fill="none" stroke="#392b36" stroke-width="3" stroke-linecap="round"/>
+  <path d="M55 88 L20 82 M55 96 L22 101 M105 88 L140 82 M105 96 L138 101" stroke="#392b36" stroke-width="2" stroke-linecap="round"/>
+ </svg>
+ <p>THE CAT HAS ARRIVED.</p>
+ <span>It knows what you did last round.</span>
+</div>
+ <div class="cat-quote">
+ <div id="catQuote">🐾 The cat is watching...</div>
+ <button class="secondary" onclick="catSays()">ASK THE CAT</button>
+</div>
+ <div id="message"></div>
 
 <section id="home">
  <div class="card">
   <h2>Start a new game</h2>
-  <input id="hostName" value="Danielle" placeholder="Your name">
+  <input id="hostName" placeholder="Your name">
   <button onclick="createGame()">CREATE GAME</button>
  </div>
  <div class="card">
@@ -145,7 +201,24 @@ function setHostView(view){
  document.getElementById("playerTab").classList.toggle("active",view==="player");
  document.getElementById("hostTab").classList.toggle("active",view==="host");
 }
-function msg(t){
+function catSays(){
+ const lines=[
+  "😼 The cat suspects everyone.",
+  "🐾 That clue smells suspicious.",
+  "😹 The cat would like to speak to management.",
+  "🐈 You are being judged. Continue.",
+  "🙀 Someone has clearly upset the cat.",
+  "😻 The cat approves. For now.",
+  "🐾 A paw has entered the investigation.",
+  "😼 Trust nobody. Especially the fluffy ones.",
+  "🐈 The cat demands better clues.",
+  "😹 Chaos is proceeding according to cat plan."
+ ];
+
+ const line=lines[Math.floor(Math.random()*lines.length)];
+ document.getElementById("catQuote").textContent=line;
+}
+ function msg(t){
  const el=document.getElementById("message");
  el.textContent=t;el.style.display="block";
  setTimeout(()=>el.style.display="none",5000);
