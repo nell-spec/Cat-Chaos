@@ -93,11 +93,56 @@ button:disabled{opacity:.4}
 }
  .option button{margin-top:8px}
 .players{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.player{background:#39334f;padding:10px;border-radius:10px}
-.scoreline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #514966}
+.player{
+ background:#39334f;
+ padding:10px;
+ border-radius:10px;
+ display:flex;
+ align-items:center;
+ gap:8px;
+ min-width:0;
+}
+.player-avatar{
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ flex-shrink:0;
+}
+.player-avatar .achievement-art{
+ width:42px;
+ height:42px;
+ min-width:42px;
+}
+.player-avatar .achievement-art svg{
+ width:36px;
+ height:36px;
+}
+.player-avatar .avatar-emoji{
+ font-size:32px;
+ width:42px;
+ height:42px;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+}
+.player-score-name{
+ display:flex;
+ align-items:center;
+ gap:8px;
+}.scoreline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #514966}
 .scoreline button{width:auto;min-width:65px;margin:0}
-#message{position:sticky;top:5px;background:#ffd66b;color:#241d32;padding:10px;border-radius:10px;font-weight:bold;display:none;z-index:5}
-#party{position:fixed;inset:0;background:#171525ee;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:10;font-size:70px;text-align:center}
+#message{
+ position:sticky;
+ top:5px;
+ background:#ffd66b;
+ color:#241d32;
+ padding:12px;
+ border-radius:10px;
+ font-weight:bold;
+ display:none;
+ z-index:5;
+ text-align:center;
+}#party{position:fixed;inset:0;background:#171525ee;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:10;font-size:70px;text-align:center}
 #party strong{font-size:26px;color:#ffd66b}
 
 .achievement{
@@ -340,8 +385,12 @@ button:disabled{opacity:.4}
 <section id="game" class="hidden">
  <div class="card">
   <h2 id="gameTitleHeading">CAT CHAOS</h2>
-<div class="status">ROOM CODE: <b id="roomCode">----</b></div>
-  <div id="myName" class="small"></div>
+<div class="status">
+ ROOM CODE: <b id="roomCode">----</b>
+ <button class="secondary" style="margin-top:10px" onclick="copyRoomCode()">
+  📋 COPY ROOM CODE
+ </button>
+</div>  <div id="myName" class="small"></div>
   <div id="phase" class="status">Connecting…</div>
   <div id="playerList" class="players"></div>
  </div>
@@ -431,48 +480,109 @@ function storeProfile(r){
 }
 function achievementBadge(a){
  const designs={
-  "Stink Bag":["💩","#8c6b43"],
-  "Three-Pointer":["🎯","#4b91c9"],
-  "Fish of Fortune":["🐟","#319bba"],
-  "Nose Knows":["👃","#d887a8"],
-  "Catastrophe":["💥","#c94d58"],
-  "Brain Cell Missing":["🧠","#9475bd"],
-  "Knot Again!":["🪢","#bd8b4c"],
-  "Supreme Feline":["👑","#d4a62e"],
-  "Too Cool for Cats":["🕶️","#4e9a9b"],
-  "Purranormal Activity":["👻","#8d79bd"],
-  "Space Cadet":["🚀","#527ec5"],
-  "Legend of Litter":["🏆","#d4a62e"],
-  "Professional Menace":["😈","#c94d58"],
-  "Yarn Criminal":["🧶","#b56caa"],
-  "Underdog":["🐕","#9b875d"],
-  "Paw-sitive Streak":["🐾","#55a77c"],
-  "Cat Got Your Tongue?":["🤐","#6b83b9"],
-  "Nine Lives":["🐈‍⬛","#a66bb5"]
+  "Stink Bag":{
+   color:"#8c6b43",
+   art:`<path d="M35 30 Q25 20 35 13 Q48 8 50 22 Q55 8 68 13 Q78 22 65 31 L75 43 Q88 60 72 76 Q50 91 28 76 Q12 60 25 43Z" fill="#a77a43" stroke="#f5d99b" stroke-width="4"/><path d="M37 49 Q42 44 47 49 M55 49 Q60 44 65 49" stroke="#392b36" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M44 63 Q50 57 56 63 Q50 70 44 63Z" fill="#392b36"/><path d="M50 63 L50 70" stroke="#392b36" stroke-width="3"/>`
+  },
+  "Three-Pointer":{
+   color:"#4b91c9",
+   art:`<circle cx="50" cy="50" r="30" fill="#d98b43" stroke="#ffe0a0" stroke-width="4"/><path d="M20 50 H80 M50 20 Q30 50 50 80 M50 20 Q70 50 50 80" fill="none" stroke="#713d27" stroke-width="3"/><path d="M72 15 L78 29 L92 35 L78 41 L72 55 L66 41 L52 35 L66 29Z" fill="#ffe16b" stroke="#fff1bd" stroke-width="2"/>`
+  },
+  "Fish of Fortune":{
+   color:"#319bba",
+   art:`<path d="M18 50 Q42 17 75 43 L91 28 L88 50 L91 72 L75 57 Q42 83 18 50Z" fill="#55c8d8" stroke="#d8fbff" stroke-width="4"/><circle cx="66" cy="44" r="4" fill="#172033"/><path d="M38 37 L49 50 L38 63" fill="none" stroke="#167a91" stroke-width="4"/><path d="M28 22 L32 12 M50 17 L50 7 M72 23 L78 13" stroke="#ffe16b" stroke-width="4" stroke-linecap="round"/>`
+  },
+  "Nose Knows":{
+   color:"#d887a8",
+   art:`<path d="M50 17 Q38 39 31 58 Q27 76 50 78 Q73 76 69 58 Q62 39 50 17Z" fill="#e99ab5" stroke="#ffe0ec" stroke-width="4"/><path d="M37 64 Q50 53 63 64 Q50 82 37 64Z" fill="#8e4568"/><path d="M50 10 V2 M22 35 L12 30 M78 35 L88 30" stroke="#ffe16b" stroke-width="4" stroke-linecap="round"/>`
+  },
+  "Catastrophe":{
+   color:"#c94d58",
+   art:`<path d="M50 10 L59 34 L84 20 L72 45 L94 54 L69 61 L79 88 L52 72 L34 92 L35 65 L9 59 L31 43 L19 20 L43 34Z" fill="#ffbd55" stroke="#fff0bd" stroke-width="4"/><path d="M42 43 L48 49 L43 56 M60 43 L66 49 L61 56" stroke="#713d27" stroke-width="4" fill="none" stroke-linecap="round"/>`
+  },
+  "Brain Cell Missing":{
+   color:"#9475bd",
+   art:`<path d="M50 18 Q35 8 29 25 Q13 27 20 44 Q8 59 25 68 Q23 86 42 82 Q50 94 59 82 Q79 88 78 69 Q94 57 80 43 Q86 25 68 24 Q60 9 50 18Z" fill="#d4a9f2" stroke="#f5dcff" stroke-width="4"/><path d="M50 23 V78 M50 38 Q31 32 32 48 Q34 59 50 57 M50 45 Q70 33 70 49 Q69 59 50 62" fill="none" stroke="#7854a0" stroke-width="4" stroke-linecap="round"/><circle cx="79" cy="16" r="9" fill="#ffe16b"/>`
+  },
+  "Knot Again!":{
+   color:"#bd8b4c",
+   art:`<path d="M20 25 C20 5 80 5 80 30 C80 48 20 48 20 68 C20 92 80 92 80 68 C80 48 20 48 20 30" fill="none" stroke="#e6b86d" stroke-width="10" stroke-linecap="round"/><path d="M20 25 C20 5 80 5 80 30 C80 48 20 48 20 68 C20 92 80 92 80 68 C80 48 20 48 20 30" fill="none" stroke="#fff0c9" stroke-width="3" stroke-linecap="round"/>`
+  },
+  "Supreme Feline":{
+   color:"#d4a62e",
+   art:`<path d="M20 72 L27 32 L43 45 L50 15 L58 45 L75 32 L81 72Z" fill="#ffd66b" stroke="#fff1bd" stroke-width="4" stroke-linejoin="round"/><path d="M20 72 H81 V84 H20Z" fill="#b47b27" stroke="#fff1bd" stroke-width="3"/><circle cx="50" cy="60" r="6" fill="#fff7d6"/>`
+  },
+  "Too Cool for Cats":{
+   color:"#4e9a9b",
+   art:`<path d="M13 42 Q32 27 48 42 Q50 44 52 42 Q69 27 87 42 L82 60 Q65 72 52 55 Q50 53 48 55 Q34 72 18 60Z" fill="#25253c" stroke="#baf6ef" stroke-width="4"/><path d="M18 43 L45 48 M82 43 L55 48" stroke="#baf6ef" stroke-width="3"/><path d="M50 15 V5 M22 22 L15 14 M78 22 L85 14" stroke="#ffe16b" stroke-width="4" stroke-linecap="round"/>`
+  },
+  "Purranormal Activity":{
+   color:"#8d79bd",
+   art:`<path d="M50 12 C31 12 22 29 25 49 Q27 75 50 88 Q73 75 75 49 C78 29 69 12 50 12Z" fill="#e8e0ff" stroke="#fff" stroke-width="4"/><ellipse cx="41" cy="43" rx="5" ry="8" fill="#62518f"/><ellipse cx="59" cy="43" rx="5" ry="8" fill="#62518f"/><path d="M43 62 Q50 69 57 62" fill="none" stroke="#62518f" stroke-width="4" stroke-linecap="round"/><path d="M20 20 L13 12 M80 20 L87 12" stroke="#c8b8ff" stroke-width="4"/>`
+  },
+  "Space Cadet":{
+   color:"#527ec5",
+   art:`<path d="M50 9 Q76 29 68 63 L50 85 L32 63 Q24 29 50 9Z" fill="#dceaff" stroke="#fff" stroke-width="4"/><path d="M34 53 Q50 35 66 53 L64 63 H36Z" fill="#5c8fd6" stroke="#294c83" stroke-width="3"/><circle cx="50" cy="51" r="7" fill="#ffe16b"/><path d="M32 67 L17 83 L39 77 M68 67 L83 83 L61 77" fill="#f28c54" stroke="#ffd6a4" stroke-width="3"/>`
+  },
+  "Legend of Litter":{
+   color:"#d4a62e",
+   art:`<path d="M22 25 H78 L72 79 H28Z" fill="#d8a84d" stroke="#fff0bd" stroke-width="4"/><path d="M15 18 H85 V29 H15Z" fill="#ffe16b" stroke="#fff0bd" stroke-width="3"/><path d="M50 35 L56 48 L70 49 L59 59 L62 73 L50 65 L38 73 L41 59 L30 49 L44 48Z" fill="#fff3c5"/>`
+  },
+  "Professional Menace":{
+   color:"#c94d58",
+   art:`<path d="M20 38 L18 15 L40 29 Q50 23 60 29 L82 15 L80 39 Q91 70 50 84 Q9 70 20 38Z" fill="#b94c5c" stroke="#ffd0d7" stroke-width="4"/><path d="M33 49 L43 53 M57 53 L67 49" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M40 68 Q50 57 60 68" fill="none" stroke="#fff" stroke-width="4"/><path d="M50 10 L55 19 L65 20 L57 27 L59 37 L50 32 L41 37 L43 27 L35 20 L45 19Z" fill="#ffe16b"/>`
+  },
+  "Yarn Criminal":{
+   color:"#b56caa",
+   art:`<circle cx="50" cy="51" r="29" fill="#d989c9" stroke="#ffe0f8" stroke-width="4"/><path d="M28 38 Q49 20 72 40 Q82 54 58 73 Q39 84 25 60 Q20 47 39 32 Q61 18 76 52" fill="none" stroke="#873d82" stroke-width="5" stroke-linecap="round"/><path d="M72 72 L88 86" stroke="#ffe0f8" stroke-width="5" stroke-linecap="round"/>`
+  },
+  "Underdog":{
+   color:"#9b875d",
+   art:`<path d="M24 40 L18 18 L40 30 Q50 25 60 30 L82 18 L76 43 Q88 69 50 83 Q12 69 24 40Z" fill="#c79d68" stroke="#ffe6c0" stroke-width="4"/><path d="M37 49 Q42 43 47 49 M55 49 Q60 43 65 49" fill="none" stroke="#392b36" stroke-width="4" stroke-linecap="round"/><path d="M44 65 Q50 59 56 65" fill="none" stroke="#392b36" stroke-width="4" stroke-linecap="round"/><path d="M50 10 L55 20 L66 22 L58 30 L60 41 L50 35 L40 41 L42 30 L34 22 L45 20Z" fill="#ffe16b"/>`
+  },
+  "Paw-sitive Streak":{
+   color:"#55a77c",
+   art:`<ellipse cx="50" cy="61" rx="22" ry="18" fill="#b5efc7" stroke="#e4ffeb" stroke-width="3"/><ellipse cx="28" cy="36" rx="8" ry="12" transform="rotate(-25 28 36)" fill="#b5efc7"/><ellipse cx="44" cy="25" rx="8" ry="12" transform="rotate(-8 44 25)" fill="#b5efc7"/><ellipse cx="62" cy="26" rx="8" ry="12" transform="rotate(12 62 26)" fill="#b5efc7"/><ellipse cx="77" cy="40" rx="8" ry="12" transform="rotate(25 77 40)" fill="#b5efc7"/><path d="M18 80 L82 80" stroke="#ffe16b" stroke-width="5" stroke-linecap="round"/>`
+  },
+  "Cat Got Your Tongue?":{
+   color:"#6b83b9",
+   art:`<path d="M20 42 L17 17 L40 30 Q50 25 60 30 L83 17 L80 43 Q89 76 50 83 Q11 76 20 42Z" fill="#a8c1ed" stroke="#e7f0ff" stroke-width="4"/><path d="M35 49 Q42 42 48 49 M53 49 Q60 42 67 49" fill="none" stroke="#394b78" stroke-width="4" stroke-linecap="round"/><path d="M43 64 Q50 59 57 64 L55 78 Q50 84 45 78Z" fill="#d95c82" stroke="#fff" stroke-width="2"/>`
+  },
+  "Nine Lives":{
+   color:"#a66bb5",
+   art:`<path d="M20 50 C20 22 54 14 70 32 C88 52 68 82 43 76 C22 71 25 45 45 40 C61 36 72 52 61 63 C53 71 40 65 44 55" fill="none" stroke="#e2b8f0" stroke-width="9" stroke-linecap="round"/><path d="M20 50 C20 22 54 14 70 32 C88 52 68 82 43 76 C22 71 25 45 45 40 C61 36 72 52 61 63 C53 71 40 65 44 55" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="50" cy="50" r="5" fill="#ffe16b"/>`
+  }
  };
 
- const design=designs[a.name]||["🐾","#8b82a8"];
+ const design=designs[a.name]||{
+  color:"#8b82a8",
+  art:`<path d="M50 15 L61 38 L86 40 L68 58 L73 84 L50 71 L27 84 L32 58 L14 40 L39 38Z" fill="#c9c3df"/>`
+ };
+
  const secret=!!(a.is_secret||a.secret);
  const hidden=secret&&!a.unlocked;
- const symbol=hidden?"?":design[0];
- const color=hidden?"#51466f":design[1];
+ const color=hidden?"#51466f":design.color;
+ const art=hidden
+  ? `<text x="50" y="58" text-anchor="middle" font-size="48" fill="#c9c3df">?</text>`
+  : design.art;
+ const id="badge-"+String(a.achievement_key||a.name).replace(/[^a-zA-Z0-9]/g,"");
 
  return `
   <div class="achievement-art ${hidden?"secret-locked":""}">
-   <svg viewBox="0 0 100 100" role="img" aria-label="${hidden?"Secret locked achievement":esc(a.name+" achievement badge")}">
+   <svg viewBox="0 0 100 100" role="img" aria-label="${hidden?"Secret locked achievement":esc(a.name+" achievement illustration")}">
     <defs>
-     <linearGradient id="badge-${esc(a.name).replace(/[^a-zA-Z0-9]/g,"")}" x1="0" y1="0" x2="1" y2="1">
+     <linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="${color}"/>
       <stop offset="100%" stop-color="#211d32"/>
      </linearGradient>
     </defs>
-    <circle cx="50" cy="50" r="44" fill="url(#badge-${esc(a.name).replace(/[^a-zA-Z0-9]/g,"")})" stroke="#ffd66b" stroke-width="4"/>
-    <circle cx="50" cy="50" r="36" fill="none" stroke="#ffffff66" stroke-width="2" stroke-dasharray="3 4"/>
-    <text x="50" y="57" text-anchor="middle" dominant-baseline="middle" font-size="${hidden?42:39}">${symbol}</text>
+    <circle cx="50" cy="50" r="45" fill="url(#${id})" stroke="#ffd66b" stroke-width="4"/>
+    <circle cx="50" cy="50" r="38" fill="none" stroke="#ffffff66" stroke-width="2" stroke-dasharray="3 4"/>
+    ${art}
    </svg>
   </div>`;
 }
- async function loadAchievements(){
+async function loadAchievements(){
  const homeBox=document.getElementById("homeAchievements");
  const gameBox=document.getElementById("gameAchievements");
 
@@ -490,7 +600,11 @@ function achievementBadge(a){
 
   const achievements=r.achievements||[];
 profileAchievements=achievements;
-renderAvatarCollection();
+
+if(r.profile?.avatar_id){
+ selectedAvatar=r.profile.avatar_id;
+ localStorage.setItem(AVATAR_STORAGE_KEY,selectedAvatar);
+}renderAvatarCollection();
 
   const unlocked=achievements.filter(a=>a.unlocked).length;
   const total=r.achievement_count||achievements.length;
@@ -582,9 +696,9 @@ let hostView = "player";
  {id:"cat-orange",name:"Orange Cat",emoji:"🐈"},
  {id:"cat-black",name:"Black Cat",emoji:"🐈‍⬛"},
  {id:"cat-white",name:"White Cat",emoji:"🐱"},
- {id:"cat-cool",name:"Cool Cat",emoji:"😎"},
- {id:"cat-wild",name:"Wild Cat",emoji:"😼"},
- {id:"cat-party",name:"Party Cat",emoji:"😻"}
+ {id:"cat-grey",name:"Grey Cat",emoji:"🐈"},
+ {id:"cat-calico",name:"Calico Cat",emoji:"🐈"},
+ {id:"cat-tuxedo",name:"Tuxedo Cat",emoji:"🐈‍⬛"}
 ];
 
 const achievementAvatarNames=[
@@ -653,12 +767,18 @@ function renderAvatarCollection(){
  const preview=document.getElementById("selectedAvatarPreview");
  if(!choices||!preview)return;
 
- const selected=avatarDetails(selectedAvatar);
+ let selected=avatarDetails(selectedAvatar);
+
+if(!selected){
+ selectedAvatar=starterAvatars[0].id;
+ localStorage.setItem(AVATAR_STORAGE_KEY,selectedAvatar);
+ selected=starterAvatars[0];
+}
 
  preview.innerHTML=`
-  ${avatarArtwork(selected)}
-  <div><b>${esc(selected.name)}</b><div class="small">YOUR CURRENT AVATAR</div></div>
- `;
+ <div class="selected-avatar-art">${avatarArtwork(selected)}</div>
+ <div><b>${esc(selected.name)}</b><div class="small">YOUR CURRENT AVATAR</div></div>
+`;
 
   const allAvatars=[
   ...starterAvatars,
@@ -724,8 +844,48 @@ function setHostView(view){
  document.getElementById("playerTab").classList.toggle("active",view==="player");
  document.getElementById("hostTab").classList.toggle("active",view==="host");
 }
-function catSays(){
- const lines=[
+async function copyRoomCode(){
+ const code=document.getElementById("roomCode").textContent.trim();
+
+ if(!code||code==="----"){
+  msg("No room code is available yet.");
+  return;
+ }
+
+ try{
+  if(navigator.clipboard&&window.isSecureContext){
+   await navigator.clipboard.writeText(code);
+  }else{
+   throw new Error("Clipboard API unavailable");
+  }
+
+  msg("Room code "+code+" copied! Share it with your players.");
+
+ }catch(e){
+  const field=document.createElement("textarea");
+  field.value=code;
+  field.style.position="fixed";
+  field.style.opacity="0";
+  document.body.appendChild(field);
+  field.select();
+
+  let copied=false;
+  try{
+   copied=document.execCommand("copy");
+  }catch(err){}
+
+  field.remove();
+
+  if(copied){
+   msg("Room code "+code+" copied! Share it with your players.");
+  }else{
+   msg("Automatic copying failed. Please select the room code and copy it.");
+  }
+ }
+}
+
+
+function catSays(){ const lines=[
   "😼 The cat suspects everyone.",
   "🐾 That clue smells suspicious.",
   "😹 The cat would like to speak to management.",
@@ -752,6 +912,8 @@ function esc(s){
 function showGame(){
  document.getElementById("home").classList.add("hidden");
  document.getElementById("game").classList.remove("hidden");
+ document.getElementById("gameTitleHeading").textContent=
+  game?.game_title||"CAT CHAOS";
  loadAchievements();
 
  document.getElementById("hostTabs").classList.remove("hidden");
@@ -829,13 +991,27 @@ async function api(action,data={}){
 
   box.innerHTML=games.map(g=>`
    <div class="option">
-    <b>Room ${esc(g.room_code)}</b>
+    <h2>${esc(g.game_title||"CAT CHAOS")}</h2>
+    <b>ROOM CODE: ${esc(g.room_code)}</b>
+
     <div class="small">
+     ${esc(g.status||"Unknown status").replaceAll("_"," ").toUpperCase()}
+    </div>
+
+    <div class="small">
+     Last updated: ${g.updated_at?new Date(g.updated_at).toLocaleString():"Date unavailable"}
+    </div>
+
+    <div class="status">
      ${esc(g.category||"No category selected")}
      · Round ${Number(g.round_number||0)}
      · ${Number(g.player_count||0)} players
     </div>
-    <div class="small">${esc((g.player_names||[]).join(", "))}</div>
+
+    <div class="small">
+     Players: ${esc((g.player_names||[]).join(", "))}
+    </div>
+
     <button onclick="resumeSavedGame('${esc(g.room_code)}')">
      RESUME THIS GAME
     </button>
@@ -857,13 +1033,16 @@ async function resumeSavedGame(roomCode){
    profile_token:profileToken
   });
 
+  const restoredPlayer=(r.state?.players||[])
+   .find(p=>p.id===r.player_id);
+
   game={
    room_code:r.room_code,
    host_token:r.host_token,
    player_token:r.player_token,
    player_id:r.player_id,
-   player_name:
-    (r.state?.players||[]).find(p=>p.id===r.player_id)?.display_name||"Host"
+   player_name:restoredPlayer?.display_name||"Host",
+   game_title:r.game_title||"CAT CHAOS"
   };
 
   if(!game.host_token||!game.player_token){
@@ -886,8 +1065,8 @@ async function resumeSavedGame(roomCode){
 }
 async function createGame(){
  try{
-  const name=document.getElementById("hostName").value.trim()||"Host";
-
+  const name=document.getElementById("hostName").value.trim()||localStorage.getItem("catChaosPlayerName")||"Host";
+  localStorage.setItem("catChaosPlayerName",name);
   const title=document.getElementById("gameTitle").value.trim();
 
   const r=await api("create_game",{
@@ -899,12 +1078,13 @@ async function createGame(){
 
   storeProfile(r);
 
-  game={
+    game={
    room_code:r.room_code,
    host_token:r.host_token,
    player_token:r.player_token,
    player_name:name,
-   player_id:r.player_id
+   player_id:r.player_id,
+   game_title:r.game_title||title||"CAT CHAOS"
   };
 
   if(!game.room_code||!game.host_token||!game.player_token)
@@ -922,8 +1102,8 @@ async function createGame(){
 async function joinGame(){
  try{
   const room=document.getElementById("roomInput").value.trim().toUpperCase();
-  const name=document.getElementById("joinName").value.trim();
-  if(!room||!name)throw new Error("Enter the room code and your name.");
+  const name=document.getElementById("joinName").value.trim()||localStorage.getItem("catChaosPlayerName")||"";
+  if(name)localStorage.setItem("catChaosPlayerName",name);  if(!room||!name)throw new Error("Enter the room code and your name.");
   game={room_code:room};
   const r=await api("join_game",{
    room_code:room,
@@ -934,7 +1114,7 @@ async function joinGame(){
   storeProfile(r);
   game.player_token=r.player_token||r.token;
   game.player_name=name;
-  if(!game.player_token)throw new Error("The server did not return a player token.");
+  game.game_title=r.game_title||"CAT CHAOS";  if(!game.player_token)throw new Error("The server did not return a player token.");
   isHost=false;showGame();await refreshState();startPolling();
  }catch(e){game=null;msg("Could not join: "+e.message)}
 }
@@ -966,17 +1146,62 @@ function startPolling(){
  if(el && el.id==="clueText") return;
  refreshState();
 },2500);
-}function render(s,playerState=null){
+}function playerAvatarMarkup(p){
+ const avatarId=p.avatar_id||"cat-orange";
+ const starter=starterAvatars.find(a=>a.id===avatarId);
+
+ if(starter)return avatarArtwork(starter);
+
+ const achievementNames={
+  "achievement-stink_bag":"Stink Bag",
+  "achievement-three_pointer":"Three-Pointer",
+  "achievement-fish_of_fortune":"Fish of Fortune",
+  "achievement-nose_knows":"Nose Knows",
+  "achievement-catastrophe":"Catastrophe",
+  "achievement-brain_cell_missing":"Brain Cell Missing",
+  "achievement-knot_again":"Knot Again!",
+  "achievement-supreme_feline":"Supreme Feline",
+  "achievement-too_cool_for_cats":"Too Cool for Cats",
+  "achievement-purranormal_activity":"Purranormal Activity",
+  "achievement-space_cadet":"Space Cadet",
+  "achievement-legend_of_litter":"Legend of Litter",
+  "achievement-professional_menace":"Professional Menace",
+  "achievement-yarn_criminal":"Yarn Criminal",
+  "achievement-underdog":"Underdog",
+  "achievement-paw_sitive_streak":"Paw-sitive Streak",
+  "achievement-cat_got_your_tongue":"Cat Got Your Tongue?",
+  "achievement-nine_lives":"Nine Lives"
+ };
+
+ const name=achievementNames[avatarId];
+
+ if(name)return achievementBadge({name,unlocked:true});
+
+ return '<span class="avatar-emoji">🐾</span>';
+}
+
+function render(s,playerState=null){
  const players=s.players||[];
  const round=s.round||s.current_round||{};
  const status=round.status||s.status||"lobby";
  document.getElementById("phase").textContent="Game stage: "+status.replaceAll("_"," ").toUpperCase()+
   (round.round_number?" · Round "+round.round_number:"");
- document.getElementById("playerList").innerHTML=players.map((p,i)=>
-  `<div class="player"><span style="font-size:20px;margin-right:8px">🐾</span>${esc(p.display_name||p.name||"Player")}</div>`).join("");
+ document.getElementById("playerList").innerHTML=players.map(p=>`
+  <div class="player">
+   <span class="player-avatar">${playerAvatarMarkup(p)}</span>
+   <span>${esc(p.display_name||p.name||"Player")}</span>
+  </div>
+ `).join("");
  const scores=players.slice().sort((a,b)=>(b.total_score||0)-(a.total_score||0));
- document.getElementById("scores").innerHTML=scores.map(p=>
-  `<div class="scoreline"><span>${esc(p.display_name||p.name)}</span><b>${p.total_score||0} pts</b></div>`).join("")||"Scores will appear here.";
+ document.getElementById("scores").innerHTML=scores.map(p=>`
+  <div class="scoreline">
+   <span class="player-score-name">
+    <span class="player-avatar">${playerAvatarMarkup(p)}</span>
+    ${esc(p.display_name||p.name)}
+   </span>
+   <b>${p.total_score||0} pts</b>
+  </div>
+ `).join("")||"Scores will appear here.";
 
  if(isHost){
   renderHost(s,round,players);
@@ -1277,8 +1502,11 @@ function leaveGame(){
  document.getElementById("game").classList.add("hidden");
  document.getElementById("home").classList.remove("hidden");
 }
-if(profileToken){
- loadSavedGames();
+const rememberedName=localStorage.getItem("catChaosPlayerName")||"";
+document.getElementById("hostName").value=rememberedName;
+document.getElementById("joinName").value=rememberedName;
+
+if(profileToken){ loadSavedGames();
  loadAchievements();
 }
 </script>
