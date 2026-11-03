@@ -207,6 +207,69 @@ button:disabled{opacity:.4}
 .achievement-popup-card button{
  margin-top:18px;
 }
+
+.avatar-grid{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:10px;
+ margin:12px 0;
+}
+
+.avatar-choice{
+ background:#39334f;
+ border:2px solid #665d85;
+ border-radius:14px;
+ padding:10px 5px;
+ text-align:center;
+ cursor:pointer;
+ min-width:0;
+}
+
+.avatar-choice.selected{
+ border:3px solid #ffd66b;
+ background:#51466f;
+}
+
+.avatar-choice .achievement-art{
+ margin:0 auto 6px;
+}
+
+.avatar-choice .avatar-emoji{
+ font-size:42px;
+ height:68px;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+}
+
+.avatar-choice span{
+ display:block;
+ font-size:12px;
+ color:#fff;
+ overflow-wrap:anywhere;
+}
+
+.avatar-preview{
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ gap:12px;
+ background:#201d30;
+ border-radius:12px;
+ padding:12px;
+ margin:12px 0;
+}
+
+.avatar-preview .achievement-art{
+ width:76px;
+ height:76px;
+ min-width:76px;
+}
+
+.avatar-preview .achievement-art svg{
+ width:66px;
+ height:66px;
+}
 </style>
 </head>
 <body>
@@ -235,19 +298,30 @@ button:disabled{opacity:.4}
 
  <section id="home">
  <div class="card">
-  <button class="secondary" onclick="toggleHomeAchievements()">🏆 ACHIEVEMENTS</button>
-  <div id="homeAchievementsPanel" class="hidden">
+  <div class="host-tabs" style="position:static">
+   <button id="homeAchievementsTab" class="active" onclick="showHomeCollection('achievements')">🏆 ACHIEVEMENTS</button>
+   <button id="homeAvatarsTab" onclick="showHomeCollection('avatars')">🐈 AVATARS</button>
+  </div>
+
+  <div id="homeAchievementsPanel">
    <h2>Cat Chaos Achievements</h2>
    <p class="small">Your lifetime achievements and unlocked rewards.</p>
    <div id="homeAchievements"></div>
-   <button class="secondary" onclick="toggleHomeAchievements()">CLOSE ACHIEVEMENTS</button>
+  </div>
+
+  <div id="homeAvatarsPanel" class="hidden">
+   <h2>🐾 Choose Your Avatar</h2>
+   <p class="small">Pick the face you want everyone to see.</p>
+   <div id="selectedAvatarPreview" class="avatar-preview"></div>
+   <div id="avatarChoices" class="avatar-grid"></div>
   </div>
  </div>
  <div class="card">
   <h2>Start a new game</h2>
   <input id="hostName" placeholder="Your name">
+  <input id="gameTitle" placeholder="Game title (optional)" maxlength="50">
   <button onclick="createGame()">CREATE GAME</button>
- </div>
+</div>
 
  <div class="card">
   <h2>🐾 Your Saved Games</h2>
@@ -265,7 +339,8 @@ button:disabled{opacity:.4}
 
 <section id="game" class="hidden">
  <div class="card">
-  <h2>Room <span id="roomCode">----</span></h2>
+  <h2 id="gameTitleHeading">CAT CHAOS</h2>
+<div class="status">ROOM CODE: <b id="roomCode">----</b></div>
   <div id="myName" class="small"></div>
   <div id="phase" class="status">Connecting…</div>
   <div id="playerList" class="players"></div>
@@ -329,7 +404,9 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const PROFILE_STORAGE_KEY = "catChaosProfileToken";
 const RECOVERY_STORAGE_KEY = "catChaosRecoveryCode";
-
+const AVATAR_STORAGE_KEY = "catChaosAvatar";
+let selectedAvatar = localStorage.getItem(AVATAR_STORAGE_KEY)||"cat-orange";
+let profileAchievements = [];
 let profileToken = localStorage.getItem(PROFILE_STORAGE_KEY) || "";
 let recoveryCode = localStorage.getItem(RECOVERY_STORAGE_KEY) || "";
 
@@ -412,6 +489,8 @@ function achievementBadge(a){
   if(!r.ok)throw new Error("Could not load achievements.");
 
   const achievements=r.achievements||[];
+profileAchievements=achievements;
+renderAvatarCollection();
 
   const unlocked=achievements.filter(a=>a.unlocked).length;
   const total=r.achievement_count||achievements.length;
@@ -499,14 +578,127 @@ let lastMyScore = null;
 let poller = null;
 let clueDraft = "";
 let hostView = "player";
+ const starterAvatars=[
+ {id:"cat-orange",name:"Orange Cat",emoji:"🐈"},
+ {id:"cat-black",name:"Black Cat",emoji:"🐈‍⬛"},
+ {id:"cat-white",name:"White Cat",emoji:"🐱"},
+ {id:"cat-cool",name:"Cool Cat",emoji:"😎"},
+ {id:"cat-wild",name:"Wild Cat",emoji:"😼"},
+ {id:"cat-party",name:"Party Cat",emoji:"😻"}
+];
+
+const achievementAvatarNames=[
+ "Stink Bag","Three-Pointer","Fish of Fortune","Nose Knows",
+ "Catastrophe","Brain Cell Missing","Knot Again!","Supreme Feline",
+ "Too Cool for Cats","Purranormal Activity","Space Cadet",
+ "Legend of Litter","Professional Menace","Yarn Criminal",
+ "Underdog","Paw-sitive Streak","Cat Got Your Tongue?","Nine Lives"
+];
+
+function avatarDetails(id){
+ const starter=starterAvatars.find(a=>a.id===id);
+ if(starter)return starter;
+
+ const achievementKey = id.replace(/^achievement-/,"");
+ const achievement = profileAchievements.find(
+   a => a.achievement_key === achievementKey
+ );
+
+ if(!achievement || !achievement.unlocked)return null;
+
+  return {
+   id,
+   name: achievement.name,
+   emoji: "🐾",
+   achievement: true
+ };
+}
+
+function avatarArtwork(avatar){
+ if(avatar.achievement){
+  return achievementBadge({name:avatar.name,unlocked:true});
+ }
+
+ return `<div class="avatar-emoji">${avatar.emoji}</div>`;
+}
+
+async function chooseAvatar(id){
+ const avatar=avatarDetails(id);
+
+ if(!avatar){
+  msg("That achievement avatar has not been unlocked yet.");
+  return;
+ }
+
+ const previousAvatar=selectedAvatar;
+ selectedAvatar=id;
+ localStorage.setItem(AVATAR_STORAGE_KEY,id);
+ renderAvatarCollection();
+
+ if(!profileToken)return;
+
+ try{
+  await api("update_avatar",{avatar_id:id});
+  msg("Avatar saved!");
+ }catch(e){
+  selectedAvatar=previousAvatar;
+  localStorage.setItem(AVATAR_STORAGE_KEY,previousAvatar);
+  renderAvatarCollection();
+  msg("Could not save avatar: "+e.message);
+ }
+}
+
+function renderAvatarCollection(){
+ const choices=document.getElementById("avatarChoices");
+ const preview=document.getElementById("selectedAvatarPreview");
+ if(!choices||!preview)return;
+
+ const selected=avatarDetails(selectedAvatar);
+
+ preview.innerHTML=`
+  ${avatarArtwork(selected)}
+  <div><b>${esc(selected.name)}</b><div class="small">YOUR CURRENT AVATAR</div></div>
+ `;
+
+  const allAvatars=[
+  ...starterAvatars,
+  ...profileAchievements
+   .filter(a=>a.unlocked)
+   .map(a=>({
+    id:"achievement-"+a.achievement_key,
+    name:a.name,
+    achievement:true
+   }))
+ ];
+
+ choices.innerHTML=allAvatars.map(a=>`
+  <button class="avatar-choice ${selectedAvatar===a.id?"selected":""}"
+   onclick="chooseAvatar('${esc(a.id)}')">
+   ${avatarArtwork(a)}
+   <span>${esc(a.name)}</span>
+  </button>
+ `).join("");
+}
+
+function showHomeCollection(tab){
+ const achievements=document.getElementById("homeAchievementsPanel");
+ const avatars=document.getElementById("homeAvatarsPanel");
+ const achievementsTab=document.getElementById("homeAchievementsTab");
+ const avatarsTab=document.getElementById("homeAvatarsTab");
+
+ const showAchievements=tab==="achievements";
+
+ achievements.classList.toggle("hidden",!showAchievements);
+ avatars.classList.toggle("hidden",showAchievements);
+
+ achievementsTab.classList.toggle("active",showAchievements);
+ avatarsTab.classList.toggle("active",!showAchievements);
+
+ if(showAchievements)loadAchievements();
+ else renderAvatarCollection();
+}
 function toggleHomeAchievements(){
- const panel=document.getElementById("homeAchievementsPanel");
- if(!panel)return;
-
- const opening=panel.classList.contains("hidden");
- panel.classList.toggle("hidden");
-
- if(opening)loadAchievements();
+ showHomeCollection("achievements");
 }
 
 function toggleGameAchievements(){
@@ -696,10 +888,15 @@ async function createGame(){
  try{
   const name=document.getElementById("hostName").value.trim()||"Host";
 
+  const title=document.getElementById("gameTitle").value.trim();
+
   const r=await api("create_game",{
    display_name:name,
+   game_title:title,
+   avatar_id:selectedAvatar,
    profile_token:profileToken
   });
+
   storeProfile(r);
 
   game={
@@ -731,6 +928,7 @@ async function joinGame(){
   const r=await api("join_game",{
    room_code:room,
    display_name:name,
+   avatar_id:selectedAvatar,
    profile_token:profileToken
   });
   storeProfile(r);
