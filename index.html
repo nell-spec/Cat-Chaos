@@ -416,6 +416,13 @@ async function act(action){
  actionInProgress=true;
  try{
   await api(action);
+
+  if(action==="end_game"){
+   leaveGame();
+   msg("Game ended and erased successfully.");
+   return;
+  }
+
   await refreshState();
   msg("Done!");
  }catch(e){
