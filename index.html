@@ -21,6 +21,30 @@ button.secondary{background:#665d85;color:white}
 button.danger{background:#a83d56;color:white}
 button:disabled{opacity:.4}
 .hidden{display:none!important}
+
+.host-tabs{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:8px;
+ position:sticky;
+ top:0;
+ z-index:4;
+ background:#171525;
+ padding:8px 0;
+ margin:8px 0;
+}
+.host-tabs button{
+ margin:0;
+ padding:15px 8px;
+}
+.host-tabs button.active{
+ background:#ffd66b;
+ color:#241d32;
+}
+.host-tabs button:not(.active){
+ background:#665d85;
+ color:white;
+}
 .small{font-size:13px;color:#c9c3df}
 .status{padding:10px;background:#201d30;border-radius:10px;margin:10px 0}
 .option{background:#39334f;border:2px solid #615777;border-radius:12px;padding:13px;margin:9px 0}
@@ -67,6 +91,11 @@ button:disabled{opacity:.4}
   <div id="playerList" class="players"></div>
  </div>
 
+ <div id="hostTabs" class="host-tabs hidden">
+  <button id="playerTab" class="active" onclick="setHostView('player')">🐈 PLAYER VIEW</button>
+  <button id="hostTab" onclick="setHostView('host')">🎛 HOST VIEW</button>
+ </div>
+
  <div id="hostPanel" class="card hidden">
   <h2>Master Scoring Device</h2>
   <div id="hostActions"></div>
@@ -103,7 +132,19 @@ let isHost = false;
 let lastMyScore = null;
 let poller = null;
 let clueDraft = "";
+let hostView = "player";
 
+function setHostView(view){
+ if(!isHost)return;
+
+ hostView=view;
+
+ document.getElementById("hostPanel").classList.toggle("hidden",view!=="host");
+ document.getElementById("playerPanel").classList.toggle("hidden",view!=="player");
+
+ document.getElementById("playerTab").classList.toggle("active",view==="player");
+ document.getElementById("hostTab").classList.toggle("active",view==="host");
+}
 function msg(t){
  const el=document.getElementById("message");
  el.textContent=t;el.style.display="block";
@@ -115,12 +156,20 @@ function esc(s){
 function showGame(){
  document.getElementById("home").classList.add("hidden");
  document.getElementById("game").classList.remove("hidden");
- document.getElementById("hostPanel").classList.toggle("hidden",!isHost);
- document.getElementById("playerPanel").classList.remove("hidden");
+
+ document.getElementById("hostTabs").classList.toggle("hidden",!isHost);
+
  document.getElementById("roomCode").textContent=game.room_code||"----";
  document.getElementById("myName").textContent=isHost
   ? "Host — Player 1: "+game.player_name
   : "Playing as "+game.player_name;
+
+ if(isHost){
+  setHostView(hostView);
+ }else{
+  document.getElementById("hostPanel").classList.add("hidden");
+  document.getElementById("playerPanel").classList.remove("hidden");
+ }
 }
 async function api(action,data={}){
  const hostActions=[
@@ -377,7 +426,7 @@ function renderPlayer(s,r){
   });
  }
 
- if(r.status==="assignments"){
+  if(["assignments","submissions"].includes(r.status)){
   html+=`<p>Your secret assignment:</p><h2>${esc(r.assigned_to_name||r.assignedTo||"Your assigned player")}</h2>`;
   html+=`<p>Think of a funny, recognizable clue for this person. Keep it secret!</p>`;
  }
@@ -394,10 +443,10 @@ function renderPlayer(s,r){
  }
 
  if(r.status==="playing"){
-  html+="<p>These are the clues for the other players. Do not show anyone your own secret clue.</p>";
+  html+="<p>These are the clues about the other players. Your own clue is hidden from you.</p>";
   (r.clues_for_other_players||r.cluesForOtherPlayers||[]).forEach(c=>{
    html+=`<div class="option">
-    <b>${esc(c.creator_name||"A player")}</b>
+    <b>${esc(c.recipient_name||"A player")}</b>
     <div>${esc(c.clue_text||c.clue||c.text)}</div>
    </div>`;
   });
@@ -505,6 +554,7 @@ function leaveGame(){
  poller=null;
  game=null;
  isHost=false;
+ hostView="player";
  lastMyScore=null;
  clueDraft="";
  actionInProgress=false;
