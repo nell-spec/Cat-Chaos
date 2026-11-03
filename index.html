@@ -66,7 +66,7 @@ button:disabled{opacity:.4}
 <body>
 <main>
 <h1>🐈 CAT CHAOS 🐾</h1>
-<div class="sub">Secret clues. Suspicious cats. Maximum chaos.</div>
+<div class="sub">🐾 A secret-assignment clue & guessing party game 🐾</div>
 <div id="message"></div>
 
 <section id="home">
@@ -428,7 +428,7 @@ function renderPlayer(s,r){
 
   if(["assignments","submissions"].includes(r.status)){
   html+=`<p>Your secret assignment:</p><h2>${esc(r.assigned_to_name||r.assignedTo||"Your assigned player")}</h2>`;
-  html+=`<p>Think of a funny, recognizable clue for this person. Keep it secret!</p>`;
+  html+=`<p><b>Write a clue for ${esc(r.assigned_to_name||r.assignedTo||"this player")}.</b> Your clue must fit the selected category and be something they will recognize and be able to guess. Make it personal enough that they'll have a chance of figuring it out, but don't give the answer away!</p>`;
  }
 
  if(r.status==="submissions"||r.status==="assignments"){
@@ -436,7 +436,7 @@ function renderPlayer(s,r){
    html+=`<div class="status">✓ Your clue has been submitted! Waiting for the other players…</div>`;
   }else if(r.assigned_to_name||r.assignedTo){
    html+=`<input id="clueText" placeholder="Enter your secret clue" value="${esc(clueDraft)}" oninput="clueDraft=this.value">`;
-   html+=`<button onclick="submitClue()">SUBMIT SECRET CLUE</button>`;
+   html+=`<button onclick="submitClue()">🐾 SUBMIT SECRET CLUE 🐾</button>`;
   }else{
    html+="<p>Waiting for your private assignment…</p>";
   }
