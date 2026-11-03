@@ -99,6 +99,35 @@ button:disabled{opacity:.4}
 #message{position:sticky;top:5px;background:#ffd66b;color:#241d32;padding:10px;border-radius:10px;font-weight:bold;display:none;z-index:5}
 #party{position:fixed;inset:0;background:#171525ee;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:10;font-size:70px;text-align:center}
 #party strong{font-size:26px;color:#ffd66b}
+
+.achievement{
+ background:#39334f;
+ border:1px solid #665d85;
+ border-radius:12px;
+ padding:12px;
+ margin:8px 0;
+}
+.achievement.unlocked{
+ border-color:#ffd66b;
+ background:#45405f;
+}
+.achievement-name{
+ color:#ffd66b;
+ font-weight:800;
+}
+.achievement-meta{
+ color:#c9c3df;
+ font-size:12px;
+ margin-top:4px;
+}
+.achievement-notice{
+ background:#45405f;
+ border:2px solid #ffd66b;
+ border-radius:12px;
+ padding:14px;
+ margin:10px 0;
+ text-align:center;
+}
 </style>
 </head>
 <body>
@@ -126,6 +155,12 @@ button:disabled{opacity:.4}
  <div id="message"></div>
 
 <section id="home">
+ <div class="card">
+  <h2>🏆 Cat Chaos Achievements</h2>
+  <p class="small">Your lifetime achievements and unlocked rewards.</p>
+  <button class="secondary" onclick="loadAchievements()">VIEW MY ACHIEVEMENTS</button>
+  <div id="homeAchievements"></div>
+</div>
  <div class="card">
   <h2>Start a new game</h2>
   <input id="hostName" placeholder="Your name">
@@ -168,7 +203,12 @@ button:disabled{opacity:.4}
   <h2>🐈 Your Secret Clues & Assignments</h2>
   <div id="privateContent"></div>
  </div>
-
+ <div class="card">
+  <h2>🏆 Achievements</h2>
+  <div id="gameAchievements">
+   <p class="small">Your achievements will appear here.</p>
+  </div>
+ </div>
  <div class="card">
   <h2>Scores</h2>
   <div id="scores"></div>
@@ -215,7 +255,58 @@ function storeProfile(r){
   );
  }
 }
+async function loadAchievements(){
+ const homeBox=document.getElementById("homeAchievements");
+ const gameBox=document.getElementById("gameAchievements");
 
+ if(!profileToken){
+  if(homeBox)homeBox.innerHTML="<p>Create or recover a profile to view achievements.</p>";
+  if(gameBox)gameBox.innerHTML="<p>Create or recover a profile to view achievements.</p>";
+  return;
+ }
+
+ if(homeBox)homeBox.innerHTML="<p>Loading achievements…</p>";
+
+ try{
+  const r=await api("profile_state",{profile_token:profileToken});
+  if(!r.ok)throw new Error("Could not load achievements.");
+
+  const achievements=r.achievements||[];
+
+  const unlocked=achievements.filter(a=>a.unlocked).length;
+  const total=r.achievement_count||achievements.length;
+
+  const html=`
+   <div class="status">
+    🏆 <b>${unlocked} of ${total}</b> achievements unlocked
+    <br><span class="small">${Number(r.profile?.total_points||0)} lifetime points · ${Number(r.profile?.total_rounds||0)} rounds · ${Number(r.profile?.total_games||0)} games</span>
+   </div>
+   ${achievements.map(a=>`
+    <div class="achievement ${a.unlocked?"unlocked":""}">
+     <div class="achievement-name">${a.unlocked?"🏆":"🔒"} ${esc(a.name)}</div>
+     <div>${esc(a.description)}</div>
+     <div class="achievement-meta">${esc(a.rarity||"Regular")} · ${a.unlocked?"UNLOCKED":"NOT YET EARNED"}</div>
+    </div>
+   `).join("")}
+  `;
+
+  if(homeBox)homeBox.innerHTML=html;
+  if(gameBox)gameBox.innerHTML=html;
+
+ }catch(e){
+  const error="<p>Could not load achievements: "+esc(e.message)+"</p>";
+  if(homeBox)homeBox.innerHTML=error;
+  if(gameBox)gameBox.innerHTML=error;
+ }
+}
+
+function showAchievementUnlocks(achievements){
+ if(!achievements||!achievements.length)return;
+
+const names=achievements.map(a=>"🏆 "+a.name).join(" · ");
+msg("NEW ACHIEVEMENT UNLOCKED! "+names);
+ loadAchievements();
+}
 let game = null;
 let isHost = false;
 let lastMyScore = null;
@@ -262,6 +353,7 @@ function esc(s){
 function showGame(){
  document.getElementById("home").classList.add("hidden");
  document.getElementById("game").classList.remove("hidden");
+ loadAchievements();
 
  document.getElementById("hostTabs").classList.toggle("hidden",!isHost);
 
@@ -659,16 +751,33 @@ async function act(action){
  if(actionInProgress)return;
  actionInProgress=true;
  try{
-  await api(action);
+  const result=await api(action);
 
   if(action==="end_game"){
+   const unlocked=result.unlocked_achievements||[];
    leaveGame();
-   msg("Game ended and archived.");
+
+   if(unlocked.length){
+    showAchievementUnlocks(unlocked);
+    msg("Game ended and archived! New achievement unlocked.");
+   }else{
+    msg("Game ended and archived.");
+   }
    return;
   }
 
   await refreshState();
-  msg("Done!");
+
+  if(action==="next_round"){
+   const unlocked=result.unlocked_achievements||[];
+   if(unlocked.length){
+    showAchievementUnlocks(unlocked);
+   }else{
+    msg("Done!");
+   }
+  }else{
+   msg("Done!");
+  }
  }catch(e){
   msg(e.message);
  }finally{
@@ -764,6 +873,7 @@ function leaveGame(){
 }
 if(profileToken){
  loadSavedGames();
+ loadAchievements();
 }
 </script>
 </body>
