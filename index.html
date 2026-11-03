@@ -115,6 +115,39 @@ button:disabled{opacity:.4}
  color:#ffd66b;
  font-weight:800;
 }
+.achievement-row{
+ display:flex;
+ align-items:center;
+ gap:12px;
+}
+.achievement-art{
+ width:68px;
+ height:68px;
+ min-width:68px;
+ border-radius:50%;
+ background:linear-gradient(145deg,#51466f,#211d32);
+ border:2px solid #ffd66b;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ box-shadow:0 3px 10px #0006;
+}
+.achievement-art svg{
+ width:58px;
+ height:58px;
+}
+.achievement.locked .achievement-art{
+ border-color:#665d85;
+ filter:grayscale(1);
+ opacity:.65;
+}
+.achievement.secret-locked .achievement-art{
+ background:#171525;
+ border:2px dashed #8b82a8;
+}
+.achievement.secret-locked .achievement-name{
+ color:#c9c3df;
+}
 .achievement-meta{
  color:#c9c3df;
  font-size:12px;
@@ -259,7 +292,50 @@ function storeProfile(r){
   );
  }
 }
-async function loadAchievements(){
+function achievementBadge(a){
+ const designs={
+  "Stink Bag":["💩","#8c6b43"],
+  "Three-Pointer":["🎯","#4b91c9"],
+  "Fish of Fortune":["🐟","#319bba"],
+  "Nose Knows":["👃","#d887a8"],
+  "Catastrophe":["💥","#c94d58"],
+  "Brain Cell Missing":["🧠","#9475bd"],
+  "Knot Again!":["🪢","#bd8b4c"],
+  "Supreme Feline":["👑","#d4a62e"],
+  "Too Cool for Cats":["🕶️","#4e9a9b"],
+  "Purranormal Activity":["👻","#8d79bd"],
+  "Space Cadet":["🚀","#527ec5"],
+  "Legend of Litter":["🏆","#d4a62e"],
+  "Professional Menace":["😈","#c94d58"],
+  "Yarn Criminal":["🧶","#b56caa"],
+  "Underdog":["🐕","#9b875d"],
+  "Paw-sitive Streak":["🐾","#55a77c"],
+  "Cat Got Your Tongue?":["🤐","#6b83b9"],
+  "Nine Lives":["🐈‍⬛","#a66bb5"]
+ };
+
+ const design=designs[a.name]||["🐾","#8b82a8"];
+ const secret=!!(a.is_secret||a.secret);
+ const hidden=secret&&!a.unlocked;
+ const symbol=hidden?"?":design[0];
+ const color=hidden?"#51466f":design[1];
+
+ return `
+  <div class="achievement-art ${hidden?"secret-locked":""}">
+   <svg viewBox="0 0 100 100" role="img" aria-label="${hidden?"Secret locked achievement":esc(a.name+" achievement badge")}">
+    <defs>
+     <linearGradient id="badge-${esc(a.name).replace(/[^a-zA-Z0-9]/g,"")}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="${color}"/>
+      <stop offset="100%" stop-color="#211d32"/>
+     </linearGradient>
+    </defs>
+    <circle cx="50" cy="50" r="44" fill="url(#badge-${esc(a.name).replace(/[^a-zA-Z0-9]/g,"")})" stroke="#ffd66b" stroke-width="4"/>
+    <circle cx="50" cy="50" r="36" fill="none" stroke="#ffffff66" stroke-width="2" stroke-dasharray="3 4"/>
+    <text x="50" y="57" text-anchor="middle" dominant-baseline="middle" font-size="${hidden?42:39}">${symbol}</text>
+   </svg>
+  </div>`;
+}
+ async function loadAchievements(){
  const homeBox=document.getElementById("homeAchievements");
  const gameBox=document.getElementById("gameAchievements");
 
@@ -285,13 +361,22 @@ async function loadAchievements(){
     🏆 <b>${unlocked} of ${total}</b> achievements unlocked
     <br><span class="small">${Number(r.profile?.total_points||0)} lifetime points · ${Number(r.profile?.total_rounds||0)} rounds · ${Number(r.profile?.total_games||0)} games</span>
    </div>
-   ${achievements.map(a=>`
-    <div class="achievement ${a.unlocked?"unlocked":""}">
-     <div class="achievement-name">${a.unlocked?"🏆":"🔒"} ${esc(a.name)}</div>
-     <div>${esc(a.description)}</div>
-     <div class="achievement-meta">${esc(a.rarity||"Regular")} · ${a.unlocked?"UNLOCKED":"NOT YET EARNED"}</div>
-    </div>
-   `).join("")}
+   ${achievements.map(a=>{
+    const secret=!!(a.is_secret||a.secret);
+    const hidden=secret&&!a.unlocked;
+    return `
+     <div class="achievement ${a.unlocked?"unlocked":"locked"} ${hidden?"secret-locked":""}">
+      <div class="achievement-row">
+       ${achievementBadge(a)}
+       <div>
+        <div class="achievement-name">${hidden?"🔒 Secret Achievement":a.unlocked?"🏆 "+esc(a.name):"🔒 "+esc(a.name)}</div>
+        <div>${hidden?"Complete a secret challenge to discover this reward.":esc(a.description)}</div>
+        <div class="achievement-meta">${hidden?"SECRET · LOCKED":esc(a.rarity||"Regular")+" · "+(a.unlocked?"UNLOCKED":"NOT YET EARNED")}</div>
+       </div>
+      </div>
+     </div>
+    `;
+   }).join("")}
   `;
 
   if(homeBox)homeBox.innerHTML=html;
