@@ -161,6 +161,52 @@ button:disabled{opacity:.4}
  margin:10px 0;
  text-align:center;
 }
+
+#achievementPopup{
+ position:fixed;
+ inset:0;
+ z-index:30;
+ background:#100e1eee;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ padding:20px;
+}
+
+.achievement-popup-card{
+ width:100%;
+ max-width:390px;
+ background:#29263d;
+ border:3px solid #ffd66b;
+ border-radius:20px;
+ padding:24px;
+ text-align:center;
+ box-shadow:0 10px 40px #000b;
+}
+
+.achievement-popup-card h2{
+ margin:12px 0;
+}
+
+.achievement-popup-card .achievement-art{
+ width:112px;
+ height:112px;
+ min-width:112px;
+ margin:12px auto;
+}
+
+.achievement-popup-card .achievement-art svg{
+ width:98px;
+ height:98px;
+}
+
+.achievement-popup-card p{
+ color:#c9c3df;
+}
+
+.achievement-popup-card button{
+ margin-top:18px;
+}
 </style>
 </head>
 <body>
@@ -260,6 +306,19 @@ button:disabled{opacity:.4}
  <div>🐈 🎉 🐾 😻 🎊</div>
  <strong>YOU SCORED! CAT CHAOS!</strong>
  <div style="font-size:18px">Tap to continue</div>
+</div>
+
+<div id="achievementPopup" class="hidden">
+ <div class="achievement-popup-card">
+  <div style="font-size:15px;color:#ffd66b;font-weight:800">
+   🏆 ACHIEVEMENT UNLOCKED!
+  </div>
+  <div id="achievementPopupArt"></div>
+  <h2 id="achievementPopupName"></h2>
+  <p id="achievementPopupDescription"></p>
+  <div id="achievementPopupRarity" class="achievement-meta"></div>
+  <button onclick="dismissAchievementPopup()">CLAIM YOUR ACHIEVEMENT</button>
+ </div>
 </div>
 
 <script>
@@ -390,12 +449,49 @@ function achievementBadge(a){
  }
 }
 
-function showAchievementUnlocks(achievements){
- if(!achievements||!achievements.length)return;
+let achievementQueue=[];
+let showingAchievement=false;
+let shownAchievementKeys=new Set();
 
-const names=achievements.map(a=>"🏆 "+a.name).join(" · ");
-msg("NEW ACHIEVEMENT UNLOCKED! "+names);
+function showAchievementUnlocks(achievements){
+ if(!Array.isArray(achievements)||!achievements.length)return;
+
+ achievements.forEach(a=>{
+  if(!a||!a.name)return;
+
+  const key=a.id||a.achievement_key||a.name;
+
+  if(shownAchievementKeys.has(key))return;
+  if(achievementQueue.some(x=>(x.id||x.achievement_key||x.name)===key))return;
+
+  shownAchievementKeys.add(key);
+  achievementQueue.push({...a,unlocked:true});
+ });
+
  loadAchievements();
+ showNextAchievement();
+}
+
+function showNextAchievement(){
+ if(showingAchievement||!achievementQueue.length)return;
+
+ const a=achievementQueue.shift();
+ showingAchievement=true;
+
+ document.getElementById("achievementPopupArt").innerHTML=achievementBadge(a);
+ document.getElementById("achievementPopupName").textContent=a.name;
+ document.getElementById("achievementPopupDescription").textContent=
+  a.description||"You completed a secret Cat Chaos challenge!";
+ document.getElementById("achievementPopupRarity").textContent=
+  (a.rarity||"Achievement")+" · UNLOCKED";
+
+ document.getElementById("achievementPopup").classList.remove("hidden");
+}
+
+function dismissAchievementPopup(){
+ document.getElementById("achievementPopup").classList.add("hidden");
+ showingAchievement=false;
+ showNextAchievement();
 }
 let game = null;
 let isHost = false;
@@ -870,11 +966,10 @@ async function act(action){
    const unlocked=result.unlocked_achievements||[];
    leaveGame();
 
+   msg("Game ended and archived.");
+
    if(unlocked.length){
     showAchievementUnlocks(unlocked);
-    msg("Game ended and archived! New achievement unlocked.");
-   }else{
-    msg("Game ended and archived.");
    }
    return;
   }
