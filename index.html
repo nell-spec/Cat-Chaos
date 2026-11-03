@@ -62,7 +62,7 @@ button:disabled{opacity:.4}
 
 .host-tabs{
  display:grid;
- grid-template-columns:1fr 1fr;
+ grid-template-columns:repeat(3,1fr);
  gap:8px;
  position:sticky;
  top:0;
@@ -187,6 +187,7 @@ button:disabled{opacity:.4}
 </div>
  <div id="message"></div>
 
+ <section id="home">
  <div class="card">
   <button class="secondary" onclick="toggleHomeAchievements()">🏆 ACHIEVEMENTS</button>
   <div id="homeAchievementsPanel" class="hidden">
@@ -224,7 +225,7 @@ button:disabled{opacity:.4}
   <div id="playerList" class="players"></div>
  </div>
 
- <div class="host-tabs">
+ <div id="hostTabs" class="host-tabs">
   <button id="playerTab" class="active" onclick="setHostView('player')">🐈 PLAYER VIEW</button>
   <button id="hostTab" class="hidden" onclick="setHostView('host')">🎛 HOST VIEW</button>
   <button id="achievementsTab" onclick="toggleGameAchievements()">🏆 ACHIEVEMENTS</button>
