@@ -131,6 +131,13 @@ button:disabled{opacity:.4}
   <input id="hostName" placeholder="Your name">
   <button onclick="createGame()">CREATE GAME</button>
  </div>
+
+ <div class="card">
+  <h2>🐾 Your Saved Games</h2>
+  <p class="small">Return to a game you saved earlier.</p>
+  <button class="secondary" onclick="loadSavedGames()">REFRESH SAVED GAMES</button>
+  <div id="savedGamesList">Loading saved games…</div>
+ </div>
  <div class="card">
   <h2>Join a game</h2>
   <input id="roomInput" placeholder="Room code" autocapitalize="characters">
@@ -182,6 +189,32 @@ const SUPABASE_URL = "https://aasdlnlrgxnihhlkahii.supabase.co";
 const SUPABASE_KEY = "sb_publishable_nFF3m929Ddr4SUZHgoGcfQ_wtI_xgXM";
 const FUNCTION_URL = SUPABASE_URL + "/functions/v1/cat-chaos";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PROFILE_STORAGE_KEY = "catChaosProfileToken";
+const RECOVERY_STORAGE_KEY = "catChaosRecoveryCode";
+
+let profileToken = localStorage.getItem(PROFILE_STORAGE_KEY) || "";
+let recoveryCode = localStorage.getItem(RECOVERY_STORAGE_KEY) || "";
+
+function storeProfile(r){
+ if(r.profile_token){
+  profileToken=r.profile_token;
+  localStorage.setItem(PROFILE_STORAGE_KEY,profileToken);
+ }
+
+ if(r.recovery_code){
+  recoveryCode=r.recovery_code;
+  localStorage.setItem(RECOVERY_STORAGE_KEY,recoveryCode);
+ }
+
+ if(r.profile_created && r.recovery_code){
+  alert(
+   "IMPORTANT — SAVE YOUR CAT CHAOS RECOVERY CODE\n\n"+
+   r.recovery_code+
+   "\n\nKeep this somewhere safe. It can recover your profile if you change devices or lose your saved session."
+  );
+ }
+}
 
 let game = null;
 let isHost = false;
@@ -246,11 +279,10 @@ function showGame(){
 }
 async function api(action,data={}){
  const hostActions=[
-  "host_state","start_voting","reshuffle_categories",
+  "save_game","host_state","start_voting","reshuffle_categories",
   "make_assignments","start_playing","score_player",
   "next_round","reset_scores","end_game"
  ];
-
  const playerActions=[
   "player_state","vote_category","submit_clue"
  ];
@@ -258,7 +290,8 @@ async function api(action,data={}){
  const body={
   action,
   ...data,
-  room_code:game?.room_code
+  room_code:data.room_code||game?.room_code,
+  profile_token:data.profile_token||profileToken
  };
 
  if(hostActions.includes(action)) body.host_token=game?.host_token;
@@ -282,10 +315,86 @@ async function api(action,data={}){
 
  return result;
 }
+ async function loadSavedGames(){
+ const box=document.getElementById("savedGamesList");
+
+ if(!profileToken){
+  box.innerHTML="<p>You don't have a saved profile on this device yet. Create a game first.</p>";
+  return;
+ }
+
+ box.innerHTML="<p>Looking for your saved games…</p>";
+
+ try{
+  const r=await api("list_saved_games",{profile_token:profileToken});
+  const games=r.saved_games||[];
+
+  if(!games.length){
+   box.innerHTML="<p>No saved games found.</p>";
+   return;
+  }
+
+  box.innerHTML=games.map(g=>`
+   <div class="option">
+    <b>Room ${esc(g.room_code)}</b>
+    <div class="small">
+     ${esc(g.category||"No category selected")}
+     · Round ${Number(g.round_number||0)}
+     · ${Number(g.player_count||0)} players
+    </div>
+    <div class="small">${esc((g.player_names||[]).join(", "))}</div>
+    <button onclick="resumeSavedGame('${esc(g.room_code)}')">
+     RESUME THIS GAME
+    </button>
+   </div>
+  `).join("");
+
+ }catch(e){
+  box.innerHTML="<p>Could not load saved games: "+esc(e.message)+"</p>";
+ }
+}
+
+async function resumeSavedGame(roomCode){
+ if(actionInProgress)return;
+ actionInProgress=true;
+
+ try{
+  const r=await api("resume_saved_game",{
+   room_code:roomCode,
+   profile_token:profileToken
+  });
+
+  game={
+   room_code:r.room_code,
+   host_token:r.host_token,
+   player_token:r.player_token,
+   player_id:r.player_id,
+   player_name:
+    (r.state?.players||[]).find(p=>p.id===r.player_id)?.display_name||"Host"
+  };
+
+  if(!game.host_token||!game.player_token){
+   throw new Error("The server did not return both session tokens.");
+  }
+
+  isHost=true;
+  hostView="player";
+  showGame();
+  await refreshState();
+  startPolling();
+
+  msg("Saved game restored! Welcome back.");
+
+ }catch(e){
+  msg("Could not resume game: "+e.message);
+ }finally{
+  actionInProgress=false;
+ }
+}
 async function createGame(){
  try{
   const name=document.getElementById("hostName").value.trim()||"Host";
-  const r=await api("create_game",{display_name:name});
+
 
   game={
    room_code:r.room_code,
@@ -313,7 +422,12 @@ async function joinGame(){
   const name=document.getElementById("joinName").value.trim();
   if(!room||!name)throw new Error("Enter the room code and your name.");
   game={room_code:room};
-  const r=await api("join_game",{room_code:room,display_name:name});
+  const r=await api("join_game",{
+   room_code:room,
+   display_name:name,
+   profile_token:profileToken
+  });
+  storeProfile(r);
   game.player_token=r.player_token||r.token;
   game.player_name=name;
   if(!game.player_token)throw new Error("The server did not return a player token.");
@@ -354,8 +468,8 @@ function startPolling(){
  const status=round.status||s.status||"lobby";
  document.getElementById("phase").textContent="Game stage: "+status.replaceAll("_"," ").toUpperCase()+
   (round.round_number?" · Round "+round.round_number:"");
- document.getElementById("playerList").innerHTML=players.map(p=>
-  `<div class="player">${esc(p.display_name||p.name||"Player")}</div>`).join("");
+ document.getElementById("playerList").innerHTML=players.map((p,i)=>
+  `<div class="player"><span style="font-size:20px;margin-right:8px">🐾</span>${esc(p.display_name||p.name||"Player")}</div>`).join("");
  const scores=players.slice().sort((a,b)=>(b.total_score||0)-(a.total_score||0));
  document.getElementById("scores").innerHTML=scores.map(p=>
   `<div class="scoreline"><span>${esc(p.display_name||p.name)}</span><b>${p.total_score||0} pts</b></div>`).join("")||"Scores will appear here.";
@@ -451,7 +565,10 @@ function renderHost(s,r,players){
   if(awarded.length===players.length)html+=`<button onclick="act('next_round')">NEXT ROUND</button>`;
  }
 
- html+=`<hr><button class="secondary" onclick="resetScores()">RESET SCORES</button><button class="danger" onclick="endGame()">END & RESET GAME</button>`;
+ html+=`<hr>
+ <button onclick="act('save_game')">💾 SAVE GAME</button>
+ <button class="secondary" onclick="resetScores()">RESET SCORES</button>
+ <button class="danger" onclick="endGame()">END GAME</button>`;
  box.innerHTML=html;
 }
 function renderPlayer(s,r){
@@ -541,7 +658,7 @@ async function act(action){
 
   if(action==="end_game"){
    leaveGame();
-   msg("Game ended and erased successfully.");
+   msg("Game ended and archived.");
    return;
   }
 
@@ -620,7 +737,9 @@ async function resetScores(){
  if(confirm("Clear all scores but keep the game and players?"))await act("reset_scores");
 }
 async function endGame(){
- if(confirm("WARNING: This permanently ends the game and erases its room, clues, assignments and scores. This cannot be undone. Are you absolutely sure?"))await act("end_game");
+ if(confirm("This will permanently end and archive the game. It will no longer appear in your saved games. Are you sure?")){
+  await act("end_game");
+ }
 }
 function leaveGame(){
  if(poller)clearInterval(poller);
@@ -637,6 +756,9 @@ function leaveGame(){
  document.getElementById("party").style.display="none";
  document.getElementById("game").classList.add("hidden");
  document.getElementById("home").classList.remove("hidden");
+}
+if(profileToken){
+ loadSavedGames();
 }
 </script>
 </body>
