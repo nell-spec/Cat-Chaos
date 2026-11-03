@@ -154,13 +154,15 @@ button:disabled{opacity:.4}
 </div>
  <div id="message"></div>
 
-<section id="home">
  <div class="card">
-  <h2>🏆 Cat Chaos Achievements</h2>
-  <p class="small">Your lifetime achievements and unlocked rewards.</p>
-  <button class="secondary" onclick="loadAchievements()">VIEW MY ACHIEVEMENTS</button>
-  <div id="homeAchievements"></div>
-</div>
+  <button class="secondary" onclick="toggleHomeAchievements()">🏆 ACHIEVEMENTS</button>
+  <div id="homeAchievementsPanel" class="hidden">
+   <h2>Cat Chaos Achievements</h2>
+   <p class="small">Your lifetime achievements and unlocked rewards.</p>
+   <div id="homeAchievements"></div>
+   <button class="secondary" onclick="toggleHomeAchievements()">CLOSE ACHIEVEMENTS</button>
+  </div>
+ </div>
  <div class="card">
   <h2>Start a new game</h2>
   <input id="hostName" placeholder="Your name">
@@ -189,9 +191,10 @@ button:disabled{opacity:.4}
   <div id="playerList" class="players"></div>
  </div>
 
- <div id="hostTabs" class="host-tabs hidden">
+ <div class="host-tabs">
   <button id="playerTab" class="active" onclick="setHostView('player')">🐈 PLAYER VIEW</button>
-  <button id="hostTab" onclick="setHostView('host')">🎛 HOST VIEW</button>
+  <button id="hostTab" class="hidden" onclick="setHostView('host')">🎛 HOST VIEW</button>
+  <button id="achievementsTab" onclick="toggleGameAchievements()">🏆 ACHIEVEMENTS</button>
  </div>
 
  <div id="hostPanel" class="card hidden">
@@ -203,11 +206,12 @@ button:disabled{opacity:.4}
   <h2>🐈 Your Secret Clues & Assignments</h2>
   <div id="privateContent"></div>
  </div>
- <div class="card">
-  <h2>🏆 Achievements</h2>
+ <div id="gameAchievementsPanel" class="card hidden">
+  <h2>🏆 Cat Chaos Achievements</h2>
   <div id="gameAchievements">
    <p class="small">Your achievements will appear here.</p>
   </div>
+  <button class="secondary" onclick="toggleGameAchievements()">CLOSE ACHIEVEMENTS</button>
  </div>
  <div class="card">
   <h2>Scores</h2>
@@ -313,7 +317,28 @@ let lastMyScore = null;
 let poller = null;
 let clueDraft = "";
 let hostView = "player";
+function toggleHomeAchievements(){
+ const panel=document.getElementById("homeAchievementsPanel");
+ if(!panel)return;
 
+ const opening=panel.classList.contains("hidden");
+ panel.classList.toggle("hidden");
+
+ if(opening)loadAchievements();
+}
+
+function toggleGameAchievements(){
+ const panel=document.getElementById("gameAchievementsPanel");
+ const tab=document.getElementById("achievementsTab");
+ if(!panel)return;
+
+ const opening=panel.classList.contains("hidden");
+ panel.classList.toggle("hidden");
+
+ if(tab)tab.classList.toggle("active",opening);
+
+ if(opening)loadAchievements();
+}
 function setHostView(view){
  if(!isHost)return;
 
@@ -355,8 +380,10 @@ function showGame(){
  document.getElementById("game").classList.remove("hidden");
  loadAchievements();
 
- document.getElementById("hostTabs").classList.toggle("hidden",!isHost);
-
+ document.getElementById("hostTabs").classList.remove("hidden");
+ document.getElementById("hostTab").classList.toggle("hidden",!isHost);
+ document.getElementById("gameAchievementsPanel").classList.add("hidden");
+ document.getElementById("achievementsTab").classList.remove("active");
  document.getElementById("roomCode").textContent=game.room_code||"----";
  document.getElementById("myName").textContent=isHost
   ? "Host — Player 1: "+game.player_name
