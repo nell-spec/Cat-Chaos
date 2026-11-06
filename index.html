@@ -119,6 +119,12 @@ summary.sumbig{font-size:18px;padding:4px 0}
 
 <section id="home">
  <div class="card">
+  <h2>Welcome back?</h2>
+  <p class="small">Return to the game you were playing before.</p>
+  <button class="secondary" onclick="restoreSession()">RESTORE PREVIOUS GAME</button>
+ </div>
+
+ <div class="card">
   <h2>Start a new game</h2>
   <input id="hostName" placeholder="Your name">
   <input id="gameTitle" placeholder="Game title (optional)" maxlength="50">
@@ -686,11 +692,19 @@ function restoreSession(){
  try{
   const s=JSON.parse(localStorage.getItem(SESSION_KEY)||"null");
   if(s&&s.game&&s.game.room_code&&(s.game.player_token||s.game.host_token)){
-   game=s.game;isHost=!!s.isHost;
-   showGame();refreshState();startPolling();
+   game=s.game;
+   isHost=!!s.isHost;
+   showGame();
+   refreshState();
+   startPolling();
    msg("Welcome back! You are back in room "+game.room_code+".");
+   return;
   }
- }catch(e){clearSession();}
+  msg("No previous game session was found on this device.");
+ }catch(e){
+  clearSession();
+  msg("The saved game session could not be restored.");
+ }
 }
 
 function showGame(){
@@ -1154,14 +1168,13 @@ function leaveGame(){
 }
 
 /* ---------- Start up ---------- */
-const rememberedName=localStorage.getItem("catChaosPlayerName")||"";
-document.getElementById("hostName").value=rememberedName;
-document.getElementById("joinName").value=rememberedName;
+document.getElementById("hostName").value="";
+document.getElementById("joinName").value="";
+document.getElementById("roomInput").value="";
 renderSettings();
 setTheme(localStorage.getItem(THEME_STORAGE_KEY)||"midnight");
 if(profileToken){loadSavedGames();loadAchievements();}
 else{document.getElementById("savedGamesList").innerHTML="<p>No saved games yet.</p>";loadAchievements();}
-restoreSession();
 </script>
 </body>
 </html>
