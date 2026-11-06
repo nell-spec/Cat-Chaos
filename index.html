@@ -43,6 +43,8 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .player{background:var(--card2);padding:10px;border-radius:10px;display:flex;align-items:center;gap:8px;min-width:0}
 .player.away{opacity:.5}
 .player-avatar{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.avatar-emoji{display:flex;align-items:center;justify-content:center;height:68px;width:68px;margin:0 auto}
+.avatar-emoji svg{height:100%;width:100%}
 .player-avatar .achievement-art{width:42px;height:42px;min-width:42px}
 .player-avatar .achievement-art svg{width:36px;height:36px}
 .player-avatar .avatar-emoji{font-size:32px;width:42px;height:42px;display:flex;align-items:center;justify-content:center}
@@ -61,6 +63,15 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .achievement.locked .achievement-art{border-color:#665d85;filter:grayscale(1);opacity:.65}
 .achievement.secret-locked .achievement-art{background:#171525;border:2px dashed #8b82a8}
 .achievement-meta{color:var(--muted);font-size:12px;margin-top:4px}
+.achievement .achievement-art{width:46px;height:46px;min-width:46px}
+.achievement .achievement-art svg{width:40px;height:40px}
+.achievement{padding:8px;margin:6px 0}
+.ach-list{max-height:55vh;overflow-y:auto;padding-right:4px}
+details>summary{cursor:pointer;font-weight:800;color:var(--accent);padding:10px 0;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"▶ "}
+details[open]>summary::before{content:"▼ "}
+summary.sumbig{font-size:18px;padding:4px 0}
 .secret-counter{text-align:center;font-weight:800;color:var(--accent);margin:14px 0 4px}
 #achievementPopup{position:fixed;inset:0;z-index:30;background:#000c;display:flex;align-items:center;justify-content:center;padding:20px}
 .achievement-popup-card{width:100%;max-width:390px;background:var(--card);border:3px solid var(--accent);border-radius:20px;padding:24px;text-align:center;box-shadow:0 10px 40px #000b}
@@ -108,20 +119,6 @@ button:disabled{opacity:.4;cursor:not-allowed}
 
 <section id="home">
  <div class="card">
-  <div class="tabs" style="position:static">
-   <button id="homeAchievementsTab" class="active" onclick="showHomeCollection('achievements')">🏆 ACHIEVEMENTS</button>
-   <button id="homeSettingsTab" onclick="showHomeCollection('settings')">🐾 PAW-SONALIZE</button>
-  </div>
-  <div id="homeAchievementsPanel">
-   <h2>Cat Chaos Achievements</h2>
-   <div id="homeAchievements"></div>
-  </div>
-  <div id="homeSettingsPanel" class="hidden">
-   <div id="homeSettings"></div>
-  </div>
- </div>
-
- <div class="card">
   <h2>Start a new game</h2>
   <input id="hostName" placeholder="Your name">
   <input id="gameTitle" placeholder="Game title (optional)" maxlength="50">
@@ -151,6 +148,21 @@ button:disabled{opacity:.4;cursor:not-allowed}
   <button class="secondary" onclick="showMyRecoveryCode()">SHOW / MAKE MY RECOVERY CODE</button>
   <div id="recoveryBox" class="status hidden"></div>
  </div>
+
+ <details class="card">
+  <summary class="sumbig">🏆 My Achievements &amp; 🐾 Paw-sonalize</summary>
+  <div class="tabs" style="position:static">
+   <button id="homeAchievementsTab" class="active" onclick="showHomeCollection('achievements')">🏆 ACHIEVEMENTS</button>
+   <button id="homeSettingsTab" onclick="showHomeCollection('settings')">🐾 PAW-SONALIZE</button>
+  </div>
+  <div id="homeAchievementsPanel">
+   <h2>Cat Chaos Achievements</h2>
+   <div id="homeAchievements"></div>
+  </div>
+  <div id="homeSettingsPanel" class="hidden">
+   <div id="homeSettings"></div>
+  </div>
+ </details>
 </section>
 
 <section id="game" class="hidden">
@@ -483,6 +495,7 @@ function dismissAchievementPopup(){
  showNextAchievement();
 }
 
+function sortUnlockedFirst(list){return list.slice().sort((a,b)=>(b.unlocked?1:0)-(a.unlocked?1:0));}
 function achievementCard(a){
  const hidden=!!(a.is_secret&&!a.unlocked);
  const name=hidden?"🔒 Secret Achievement":(a.unlocked?"🏆 ":"🔒 ")+esc(a.name);
@@ -517,9 +530,10 @@ async function loadAchievements(){
   const html=`
    <div class="status">🏆 <b>${regUnlocked} / ${regular.length}</b> regular achievements
     <br><span class="small">${Number(r.profile?.total_points||0)} lifetime points · ${Number(r.profile?.total_rounds||0)} rounds played</span></div>
-   ${regular.map(achievementCard).join("")}
-   <div class="secret-counter">🔒 SECRETS: ${secUnlocked} / ${secTotal}</div>
-   ${secret.map(achievementCard).join("")}`;
+   <details><summary>🏆 Regular achievements (${regUnlocked} / ${regular.length})</summary>
+    <div class="ach-list">${sortUnlockedFirst(regular).map(achievementCard).join("")}</div></details>
+   <details><summary>🔒 Secret achievements (${secUnlocked} / ${secTotal})</summary>
+    <div class="ach-list">${sortUnlockedFirst(secret).map(achievementCard).join("")}</div></details>`;
   if(homeBox)homeBox.innerHTML=html;
   if(gameBox)gameBox.innerHTML=html;
 
@@ -540,9 +554,40 @@ function avatarDetails(id){
  if(!a||!a.unlocked||!a.unlocks_avatar)return null;
  return {id,name:a.name,achievement:true};
 }
+// Drawn starter cats, so each colour really looks like its name.
+function starterCat(id){
+ const HEAD="M24 40 L18 18 L40 30 Q50 25 60 30 L82 18 L76 43 Q88 69 50 83 Q12 69 24 40Z";
+ const cfg={
+  "cat-orange":{fill:"#f0a65a",eye:"#3a2a12",line:"#fff",mouth:"#392b36",whisk:"#fff3d6",ear:"#ffc6a0"},
+  "cat-black":{fill:"#2b2b3a",eye:"#ffe16b",line:"#cfc8e6",mouth:"#cfc8e6",whisk:"#cfc8e6",ear:"#6b4a5a"},
+  "cat-white":{fill:"#fbfbff",eye:"#4aa3e0",line:"#b9b2c8",mouth:"#7a7388",whisk:"#8a8399",ear:"#ffc2d1"},
+  "cat-grey":{fill:"#9aa3ae",eye:"#e8f5a0",line:"#fff",mouth:"#4a5260",whisk:"#e8edf3",ear:"#d9a6b4"},
+  "cat-calico":{fill:"#fbfbff",eye:"#3a6a3a",line:"#b9b2c8",mouth:"#7a5a4a",whisk:"#8a8399",ear:"#ffc2d1"},
+  "cat-tuxedo":{fill:"#2b2b3a",eye:"#c8e65a",line:"#cfc8e6",mouth:"#7a7388",whisk:"#cfc8e6",ear:"#6b4a5a"}
+ }[id]||{fill:"#f0a65a",eye:"#222",line:"#fff",mouth:"#392b36",whisk:"#fff",ear:"#ffc6a0"};
+ const cid="sc"+Math.floor(Math.random()*1e9);
+ let marks="";
+ if(id==="cat-orange")marks=`<path d="M50 30 V42 M42 32 L44 42 M58 32 L56 42" stroke="#c9742a" stroke-width="3.5" stroke-linecap="round"/><path d="M26 52 L34 54 M26 60 L34 60 M74 52 L66 54 M74 60 L66 60" stroke="#c9742a" stroke-width="3" stroke-linecap="round"/>`;
+ if(id==="cat-grey")marks=`<path d="M50 30 V42 M42 32 L44 42 M58 32 L56 42" stroke="#6f7885" stroke-width="3.5" stroke-linecap="round"/><ellipse cx="50" cy="68" rx="14" ry="10" fill="#c9d0d8"/>`;
+ if(id==="cat-calico")marks=`<ellipse cx="34" cy="36" rx="17" ry="14" fill="#f0a65a"/><ellipse cx="70" cy="38" rx="16" ry="15" fill="#2b2b3a"/><ellipse cx="62" cy="70" rx="12" ry="9" fill="#f0a65a"/>`;
+ if(id==="cat-tuxedo")marks=`<path d="M50 28 L43 54 L57 54Z" fill="#fff"/><ellipse cx="50" cy="70" rx="19" ry="13" fill="#fff"/>`;
+ if(id==="cat-black")marks="";
+ return `<svg viewBox="0 0 100 100" role="img" aria-label="Cat avatar">
+  <defs><clipPath id="${cid}"><path d="${HEAD}"/></clipPath></defs>
+  <path d="${HEAD}" fill="${cfg.fill}"/>
+  <g clip-path="url(#${cid})">${marks}</g>
+  <path d="M25 38 L21 24 L35 32Z M75 38 L79 24 L65 32Z" fill="${cfg.ear}" opacity=".85"/>
+  <path d="${HEAD}" fill="none" stroke="${cfg.line}" stroke-width="3" stroke-linejoin="round"/>
+  <ellipse cx="40" cy="52" rx="4.5" ry="6" fill="${cfg.eye}"/><ellipse cx="60" cy="52" rx="4.5" ry="6" fill="${cfg.eye}"/>
+  <ellipse cx="40" cy="52" rx="1.6" ry="4.5" fill="#111"/><ellipse cx="60" cy="52" rx="1.6" ry="4.5" fill="#111"/>
+  <path d="M46 62 Q50 58 54 62 L50 66Z" fill="#e0607a"/>
+  <path d="M50 66 Q46 72 42 69 M50 66 Q54 72 58 69" fill="none" stroke="${cfg.mouth}" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M30 62 L16 58 M30 67 L16 69 M70 62 L84 58 M70 67 L84 69" stroke="${cfg.whisk}" stroke-width="2" stroke-linecap="round"/>
+ </svg>`;
+}
 function avatarArtwork(avatar){
  if(avatar.achievement)return achievementBadge({name:avatar.name,unlocked:true});
- return `<div class="avatar-emoji">${avatar.emoji}</div>`;
+ return `<div class="avatar-emoji">${starterCat(avatar.id)}</div>`;
 }
 async function chooseAvatar(id){
  const avatar=avatarDetails(id);
