@@ -755,6 +755,15 @@ async function resumeSavedGame(roomCode){
  }catch(e){game=null;msg("Could not resume game: "+e.message);}
  finally{actionInProgress=false;}
 }
+function offerFreshProfile(e){
+ if(!/could not be verified/i.test(String(e.message||"")))return false;
+ if(!confirm("This device's saved profile can't be verified any more (it may have been used to recover or join from another device).\n\nPress OK to start a NEW profile on this device.\nPress Cancel to use 'Recover my profile' with your recovery code instead and keep your achievements."))return false;
+ profileToken="";
+ localStorage.removeItem(PROFILE_STORAGE_KEY);
+ localStorage.removeItem(RECOVERY_STORAGE_KEY);
+ msg("Old profile cleared on this device. Press the button again to continue.");
+ return true;
+}
 async function createGame(){
  try{
   const name=document.getElementById("hostName").value.trim()||localStorage.getItem("catChaosPlayerName")||"Host";
@@ -766,8 +775,7 @@ async function createGame(){
   if(!game.room_code||!game.host_token||!game.player_token)throw new Error("The server did not return both host and player tokens.");
   isHost=true;saveSession();showGame();await refreshState();startPolling();
   msg("Room created! You are Player 1. Share the room code.");
- }catch(e){game=null;msg("Could not create game: "+e.message);}
-}
+ }catch(e){game=null;if(offerFreshProfile(e))return;msg("Could not create game: "+e.message);}}
 async function joinGame(){
  try{
   const room=document.getElementById("roomInput").value.trim().toUpperCase();
@@ -783,8 +791,7 @@ async function joinGame(){
   game.game_title=r.game_title||"CAT CHAOS";
   if(!game.player_token)throw new Error("The server did not return a player token.");
   isHost=false;saveSession();showGame();await refreshState();startPolling();
- }catch(e){game=null;msg("Could not join: "+e.message);}
-}
+ }catch(e){game=null;if(offerFreshProfile(e))return;msg("Could not join: "+e.message);}}
 
 /* ---------- Profile recovery ---------- */
 async function recoverMyProfile(){
