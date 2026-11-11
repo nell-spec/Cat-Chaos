@@ -247,8 +247,8 @@ summary.sumbig{font-size:18px;padding:4px 0}
 <script>
 const designs={
   "Stink Bag":{
-   color:"#8c6b43",
-   art:`<path d="M35 30 Q25 20 35 13 Q48 8 50 22 Q55 8 68 13 Q78 22 65 31 L75 43 Q88 60 72 76 Q50 91 28 76 Q12 60 25 43Z" fill="#a77a43" stroke="#f5d99b" stroke-width="4"/><path d="M37 49 Q42 44 47 49 M55 49 Q60 44 65 49" stroke="#392b36" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M44 63 Q50 57 56 63 Q50 70 44 63Z" fill="#392b36"/><path d="M50 63 L50 70" stroke="#392b36" stroke-width="3"/>`
+   color:"#3d5a45",
+   art:`<path d="M35 30 Q25 20 35 13 Q48 8 50 22 Q55 8 68 13 Q78 22 65 31 L75 43 Q88 60 72 76 Q50 91 28 76 Q12 60 25 43Z" fill="#26302a" stroke="#9fd1a8" stroke-width="4"/><path d="M37 49 Q42 44 47 49 M55 49 Q60 44 65 49" stroke="#e6f5e0" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M44 63 Q50 57 56 63 Q50 70 44 63Z" fill="#e6f5e0"/><path d="M50 63 L50 70" stroke="#e6f5e0" stroke-width="3"/><path d="M14 24 Q9 16 14 8 M86 24 Q91 16 86 8 M50 8 Q45 2 50 -4" stroke="#9fd18a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M42 14 Q50 24 58 14" fill="none" stroke="#9fd1a8" stroke-width="3"/>`
   },
   "Three-Pointer":{
    color:"#4b91c9",
@@ -775,7 +775,8 @@ async function createGame(){
   if(!game.room_code||!game.host_token||!game.player_token)throw new Error("The server did not return both host and player tokens.");
   isHost=true;saveSession();showGame();await refreshState();startPolling();
   msg("Room created! You are Player 1. Share the room code.");
- }catch(e){game=null;if(offerFreshProfile(e))return;msg("Could not create game: "+e.message);}}
+ }catch(e){game=null;if(offerFreshProfile(e))return;msg("Could not create game: "+e.message);}
+}
 async function joinGame(){
  try{
   const room=document.getElementById("roomInput").value.trim().toUpperCase();
@@ -791,7 +792,8 @@ async function joinGame(){
   game.game_title=r.game_title||"CAT CHAOS";
   if(!game.player_token)throw new Error("The server did not return a player token.");
   isHost=false;saveSession();showGame();await refreshState();startPolling();
- }catch(e){game=null;if(offerFreshProfile(e))return;msg("Could not join: "+e.message);}}
+ }catch(e){game=null;if(offerFreshProfile(e))return;msg("Could not join: "+e.message);}
+}
 
 /* ---------- Profile recovery ---------- */
 async function recoverMyProfile(){
