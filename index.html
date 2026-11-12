@@ -851,7 +851,7 @@ function startPolling(){
  if(poller)clearInterval(poller);
  poller=setInterval(()=>{
   const el=document.activeElement;
-  if(el&&el.id==="clueText")return;
+  if(el&&(el.id==="clueText"||el.tagName==="SELECT"))return;
   refreshState();
  },2500);
 }
@@ -877,6 +877,16 @@ function showEnded(players){
  loadAchievements();
 }
 
+function keepSelectValues(fn){
+ const saved={};
+ document.querySelectorAll("#hostActions select,#privateContent select").forEach(el=>{if(el.id)saved[el.id]=el.value;});
+ fn();
+ Object.keys(saved).forEach(id=>{
+  const el=document.getElementById(id);
+  if(el&&[...el.options].some(o=>o.value===saved[id]))el.value=saved[id];
+ });
+}
+
 function render(s,playerState=null){
  const players=s.players||[];
  latestPlayers=players;
@@ -900,13 +910,15 @@ function render(s,playerState=null){
    <b>${p.total_score||0} pts</b>
   </div>`).join("")||"Scores will appear here.";
 
- if(isHost){
-  renderHost(s,round,players);
-  renderRoster(players,round);
-  if(playerState)renderPlayer(playerState,playerState.round||{},s);
- }else{
-  renderPlayer(s,round);
- }
+ keepSelectValues(()=>{
+  if(isHost){
+   renderHost(s,round,players);
+   renderRoster(players,round);
+   if(playerState)renderPlayer(playerState,playerState.round||{},s);
+  }else{
+   renderPlayer(s,round);
+  }
+ });
 
  const me=players.find(p=>p.id===(playerState?.player_id||s.player_id));
  if(!isHost&&me){
@@ -1011,33 +1023,52 @@ function renderHost(s,r,allPlayers){
 
 function renderHostQuickControls(hostState){
  if(!isHost||!hostState)return "";
- const players=hostState.players||[];
+ const players=(hostState.players||[]).filter(p=>p.is_active!==false);
  const round=hostState.round||hostState.current_round||{};
  const status=round.status||hostState.status||"lobby";
- let button="";
+ let body="";
 
- // Only show a shortcut when the host's next action is actually ready.
- if(status==="lobby"&&players.length>=2){
-  button=`<button onclick="act('start_voting')">🚀 START GAME</button>`;
+ if(status==="lobby"||status==="complete"){
+  if(players.length<2)body+=`<p class="small">Waiting for at least 2 players…</p>`;
+  body+=`<button onclick="act('start_voting')" ${players.length<2?"disabled":""}>🚀 START CATEGORY VOTE</button>`;
+
  }else if(["category_vote","category_revote"].includes(status)){
   const votes=round.votes||{};
-  const allVoted=players.length>=2&&players.every(p=>votes[p.id]);
-  if(allVoted)button=`<button onclick="act('make_assignments')">➡️ MOVE TO NEXT PHASE</button>`;
+  const voted=players.filter(p=>votes[p.id]).length;
+  const all=players.length>=2&&voted===players.length;
+  body+=`<p class="small">${status==="category_revote"?"🤝 It was a tie! Everyone is voting again between the tied categories. ":""}<b>${voted} of ${players.length}</b> votes in.${all?" Everyone has voted!":""}</p>`;
+  if(status==="category_vote")body+=`<button class="secondary" onclick="act('reshuffle_categories')">🔀 RESHUFFLE OPTIONS</button>`;
+  body+=`<button onclick="act('make_assignments')" ${all?"":"disabled"}>${status==="category_revote"?"➡️ LOCK REVOTE & ASSIGN CLUES":"➡️ LOCK VOTE & ASSIGN CLUES"}</button>`;
+
  }else if(["assignments","submissions"].includes(status)){
   const submitted=Number(round.submission_count||0);
-  if(players.length>0&&submitted>=players.length){
-   button=`<button onclick="act('start_playing')">🎮 START PLAYING</button>`;
-  }
+  const all=players.length>0&&submitted>=players.length;
+  body+=`<p class="small"><b>${submitted} of ${players.length}</b> clues in.${all?" Everyone has submitted!":""}</p>`;
+  body+=`<button onclick="act('start_playing')" ${all?"":"disabled"}>🎮 START PLAYING</button>`;
+
  }else if(status==="playing"){
-  const scores=round.scores||round.round_scores||[];
-  const scoredIds=new Set(scores.map(x=>x.player_id));
-  if(players.length>0&&players.every(p=>scoredIds.has(p.id))){
-   button=`<button onclick="act('next_round')">🐾 MOVE TO ROUND ${Number(round.round_number||1)+1}</button>`;
+  const ids=players.map(p=>p.id);
+  const awarded=(round.scores||round.round_scores||[]).filter(x=>ids.includes(x.player_id));
+  const used=awarded.map(x=>x.points);
+  body+=`<p class="small">Give points as players guess. Each score can be awarded once.</p>`;
+  players.forEach(p=>{
+   const done=awarded.find(x=>x.player_id===p.id);
+   if(done){
+    body+=`<div class="scoreline">${esc(p.display_name)} — ${done.points} pts ✓</div>`;
+   }else{
+    const opts=Array.from({length:players.length},(_,i)=>players.length-1-i).filter(x=>!used.includes(x));
+    body+=`<div class="scoreline"><span>${esc(p.display_name)}</span><select id="qpts-${p.id}" style="width:85px;margin:0">${opts.map(x=>`<option value="${x}">${x} pts</option>`).join("")}</select><button onclick="score('${p.id}','qpts-')">AWARD</button></div>`;
+   }
+  });
+  if(awarded.length===players.length&&players.length>0){
+   body+=`<button onclick="act('next_round')">🐾 NEXT ROUND (ROUND ${Number(round.round_number||1)+1})</button>`;
+  }else{
+   body+=`<div class="status">${players.length-awarded.length} player(s) still to score.</div>`;
   }
  }
 
- if(!button)return "";
- return `<div class="card" style="margin-top:16px;border:2px solid #ffd66b"><h2>⚡ HOST QUICK CONTROLS</h2><p class="small">Only you can see this. The full host dashboard is unchanged.</p>${button}</div>`;
+ if(!body)return "";
+ return `<div class="card" style="margin-top:16px;border:2px solid #ffd66b"><h2>⚡ HOST QUICK CONTROLS</h2><p class="small">Only you can see this. Same steps as the Host tab, so you can keep the game moving from here.</p>${body}</div>`;
 }
 
 function renderPlayer(s,r,hostState=null){
@@ -1104,7 +1135,7 @@ async function act(action){
  if(actionInProgress)return;
  actionInProgress=true;
  try{
-  await api(action);
+  const result=await api(action);
   if(action==="end_game"){
    leaveGame();
    msg("Game ended and archived.");
@@ -1113,7 +1144,7 @@ async function act(action){
    return;
   }
   await refreshState();
-  msg("Done!");
+  msg(action==="make_assignments"&&result?.revote?"It's a tie! Everyone votes again between the tied categories.":"Done!");
  }catch(e){msg(e.message);}
  finally{actionInProgress=false;}
 }
@@ -1148,10 +1179,10 @@ async function vote(category,button){
   msg("VOTE ERROR: "+e.message);
  }
 }
-async function score(id){
+async function score(id,prefix){
  if(actionInProgress)return;
  actionInProgress=true;
- const points=Number(document.getElementById("pts-"+id).value);
+ const points=Number(document.getElementById((prefix||"pts-")+id).value);
  try{
   await api("score_player",{player_id:id,points});
   await refreshState();
